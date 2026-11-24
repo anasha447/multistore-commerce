@@ -8,6 +8,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse;
 import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
@@ -64,6 +65,7 @@ public class Api {
 		HttpRequest.Builder request = HttpRequest
 			.newBuilder(URI.create("http://localhost:" + environment.getProperty("local.server.port") + path))
 			.header("X-Tenant-ID", "matessa")
+			.header("X-Forwarded-For", headers.getOrDefault("X-Forwarded-For", address()))
 			.method(method, (body != null) ? BodyPublishers.ofString(JSON.writeValueAsString(body)) : BodyPublishers.noBody());
 		if (body != null) {
 			request.header("Content-Type", "application/json");
@@ -71,7 +73,11 @@ public class Api {
 		if (token != null) {
 			request.header("Authorization", "Bearer " + token);
 		}
-		headers.forEach(request::header);
+		headers.forEach((name, value) -> {
+			if (!name.equals("X-Forwarded-For")) {
+				request.header(name, value);
+			}
+		});
 		try {
 			HttpResponse<String> response = client.send(request.build(), HttpResponse.BodyHandlers.ofString());
 			return new Answer(response.statusCode(), response.body(), response.headers());
@@ -83,6 +89,12 @@ public class Api {
 			Thread.currentThread().interrupt();
 			throw new IllegalStateException(ex);
 		}
+	}
+
+	/** Every call comes from somewhere else, unless a test says where. */
+	public static String address() {
+		int random = ThreadLocalRandom.current().nextInt(1 << 24);
+		return "10.%d.%d.%d".formatted(random >> 16, random >> 8 & 255, random & 255);
 	}
 
 	@TestConfiguration(proxyBeanMethods = false)

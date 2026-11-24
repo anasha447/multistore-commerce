@@ -16,6 +16,7 @@ import tools.jackson.databind.json.JsonMapper;
 import com.ecommerce.store.model.User;
 import com.ecommerce.store.model.enums.Role;
 import com.ecommerce.store.repository.AuditRepository;
+import com.ecommerce.store.security.ClientAddress;
 
 /** Who changed what. Written in the transaction of the change, so there is never one without the other. */
 @Service
@@ -25,6 +26,8 @@ public class AuditService {
 	private final AuditRepository audit;
 
 	private final JsonMapper json;
+
+	private final ClientAddress clientAddress;
 
 	/** The current request; Spring injects a proxy. */
 	private final HttpServletRequest request;
@@ -46,12 +49,16 @@ public class AuditService {
 
 	@Transactional
 	public void recordFailedSignIn(String email) {
-		audit.addFailedStaffSignIn(User.normaliseEmail(email), request.getRemoteAddr(), MDC.get("requestId"));
+		audit.addFailedStaffSignIn(User.normaliseEmail(email), clientIp(), MDC.get("requestId"));
 	}
 
 	private void add(Long actor, String roles, String action, String entity, Long entityId, Object before, Object after) {
 		audit.add(actor, roles, action, entity, entityId.toString(), toJson(before), toJson(after),
-				request.getRemoteAddr(), MDC.get("requestId"));
+				clientIp(), MDC.get("requestId"));
+	}
+
+	private String clientIp() {
+		return clientAddress.of(request).orElse(null);
 	}
 
 	private String toJson(Object value) {
