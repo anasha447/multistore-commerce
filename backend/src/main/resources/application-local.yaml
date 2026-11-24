@@ -6,3 +6,8 @@ server:
   # where the storefront looks in development
   port: 9080
   address: localhost
+
+management:
+  server:
+    port: 9081
+    address: localhost

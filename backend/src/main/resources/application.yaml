@@ -75,6 +75,26 @@ server:
     threads:
       max: 50
 
+management:
+  server:
+    # never published: only the container's health check and monitoring reach it
+    port: ${MANAGEMENT_PORT:8081}
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      group:
+        readiness:
+          # not Redis: without it the shop still works
+          include: readinessState,db
+  health:
+    mail:
+      enabled: false
+
 logging:
   pattern:
     correlation: "[%X{requestId:-}] "

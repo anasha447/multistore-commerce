@@ -34,7 +34,9 @@ class WebConventionTests {
 
 	@BeforeEach
 	void createClient() {
-		client = RestTestClient.bindToServer().baseUrl("http://localhost:" + port).build();
+		client = RestTestClient.bindToServer().baseUrl("http://localhost:" + port)
+			.defaultHeader("X-Tenant-ID", "matessa")
+			.build();
 	}
 
 	@Test
