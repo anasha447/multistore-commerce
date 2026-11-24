@@ -1,9 +1,11 @@
+store:
+  id: ${STORE_ID}
+  admin-email: ${ADMIN_EMAIL:}
+  admin-password: ${ADMIN_PASSWORD:}
+
 spring:
   application:
     name: store
-  autoconfigure:
-    # no generated user: people come from the identity module
-    exclude: org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration
   docker:
     compose:
       enabled: false
@@ -66,6 +68,15 @@ spring:
         schema-initialization:
           # Flyway creates the table
           enabled: false
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          public-key-location: ${JWT_PUBLIC_KEY}
+          jws-algorithms: RS256
+          audiences: ${store.id}
+          authorities-claim-name: roles
+          authority-prefix: ROLE_
   threads:
     virtual:
       enabled: false

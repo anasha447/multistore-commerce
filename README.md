@@ -4,7 +4,7 @@ Backend of a small e-commerce platform and the Matessa storefront it serves.
 
 | Folder | What |
 |---|---|
-| `backend/` | Spring Boot modular monolith, Java 21. One running copy and one database per store |
+| `backend/` | Spring Boot application in layers (controller, service, repository), Java 21. One running copy and one database per store |
 | `frontend/` | Matessa storefront, Next.js. Frozen: the backend fits it, not the other way round |
 | `docs/` | Architecture, API contract, business rules, decisions |
 | `CONTEXT.md` | The words used in code and documents |

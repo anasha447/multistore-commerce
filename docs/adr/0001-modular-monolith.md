@@ -1,6 +1,6 @@
 # ADR-0001: One modular monolith instead of microservices
 
-Status: accepted, 24 November 2026
+Status: accepted, 24 November 2026. The package structure is replaced by ADR-0018
 
 ## Context
 

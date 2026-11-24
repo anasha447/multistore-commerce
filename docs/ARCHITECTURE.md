@@ -39,59 +39,58 @@ its own role, and shares no network with the other store's copy.
 | stock reservation over HTTP, with expiry | one transaction |
 | 1,311 lines of tenancy code | `STORE_ID` setting, about 40 lines |
 
-## 2. Why a modular monolith
+## 2. Why one application
 
 The old seams between processes had one adapter each, so they hid nothing and cost a network hop, a
 timeout and a fallback every time. Stock and orders need to change together; putting them in one
-database turns a saga into a transaction. The walls between modules stay, enforced by the build.
+database turns a saga into a transaction. Scale comes from caching reads, then running more copies of
+the same app (section 8).
 
-Scale comes from caching reads, then running more copies of the same app (section 8). Splitting a
-module out later is possible because modules already talk only through interfaces and events.
+## 3. Layers
 
-## 3. Modules
+Root package `com.ecommerce.store`, packages by layer (ADR-0018).
 
-Root package `com.ecommerce.store`. Each module is one package. Types in the module's root package are its
-interface; `internal` is private. Spring Modulith verifies this in the build.
-
-| Module | Owns | Interface (what other modules may use) |
+| Package | Holds | May use |
 |---|---|---|
-| `platform` (open) | Errors, web setup, access policy, JWT, rate limit, cache, store id, clock | `ApiError` exceptions, `CurrentUser`, `StoreId`, `AfterCommit`, `CacheNamespace` |
-| `identity` | Users, roles, addresses, refresh tokens, login hardening | `Users.emailOf(id)`, events `StaffCreated`, `UserDisabled` |
-| `catalog` | Categories, products, variants, product images | `Catalog.variants(ids)`, `Catalog.categoryPath(productId)`, event `CatalogChanged` |
-| `inventory` | Stock levels, stock movements | `Inventory.levels(ids)`, `take(ref, lines)`, `putBack(ref, reason)`, `setLevel(variantId, qty, actor)`, event `StockLow` |
-| `promotions` | Discounts, coupons, redemptions | `Promotions.bestDiscounts(products)`, `checkCoupon`, `claimCoupon(code, customer, orderRef)`, `returnCoupon(orderRef)`, `mintWelcomeCoupon()` |
-| `pricing` | Nothing stored | `Pricing.quote(lines, coupon)`, `Pricing.prices(variantIds)` |
-| `media` | Image bytes | `Media.storeAsWebp(upload)`, `Media.read(key)` |
-| `cart` | Carts | `Carts.lines(userId)`, `Carts.clear(userId)` |
-| `payments` | Payment attempts | `Payments.methods()`, `Payments.start(order)` |
-| `orders` | Orders, items, history, idempotency, checkout | events `OrderPlaced`, `OrderStatusChanged`, `OrderCancelled` |
-| `engagement` | Reviews, wishlists, contact queries, subscribers | event `Subscribed` |
-| `analytics` | Materialized views | Endpoints only |
-| `notifications` | Sent-mail log | Listens to events, sends email |
-| `audit` | Audit entries | Nothing to call. It acts on `@Audited` (declared in `platform`) |
+| `controller` | `@RestController` classes: validate, call one service method, return a DTO. No logic, no transaction | `service`, `dto`, `model.enums` |
+| `service` | Business rules and transactions. Plain classes, no `Service` + `ServiceImpl` pairs | `repository`, `model`, `dto`, `exception`, other services |
+| `repository` | Spring Data interfaces and their queries | `model` |
+| `model` | JPA entities | `model.enums` |
+| `model.enums` | `Role`, `AddressType`, `OrderStatus`, `PaymentMethod`, `PaymentStatus`, `ShippingStatus`, `DiscountType`, `ContactQueryStatus` | nothing |
+| `dto.request`, `dto.response` | Records. Request rules as Bean Validation, responses with a static `from(entity)` | `model` |
+| `exception` | `ApiException` and the one `GlobalExceptionHandler` | `dto` |
+| `security` | `SecurityConfig` with the access policy, tokens, request filter | `repository`, `model`, `exception` |
+| `config` | Settings, clock, seed, cache and event configuration | everything |
 
-```mermaid
-flowchart LR
-  orders --> cart & pricing & inventory & promotions & payments
-  cart --> pricing
-  pricing --> catalog & promotions & inventory
-  catalog --> inventory & media
-  promotions --> catalog
-  engagement --> catalog & promotions
-  notifications -. events .-> orders & identity & inventory & engagement
-```
+A layer test (ArchUnit) fails the build when a controller touches a repository, a repository or entity
+looks upward, or a DTO is not a record.
 
-Notes:
-- `cart` needs stock for display. It asks `pricing.prices`, which returns price and stock together.
-- `promotions` needs `catalog.categoryPath`; `catalog` never needs `promotions`. Effective prices on the
-  variant list are composed by the catalog web layer through a small interface implemented by `pricing`
-  (`EffectivePrices`, declared in `catalog`), so there is no cycle.
-- The two deep modules worth protecting are `pricing` (one call, whole basket) and `inventory` (three verbs
-  hide locking, ledger and idempotency).
+### Features
+
+The layers hold these features. The owner column is a rule, not a package: only that service uses the repository of the table.
+
+| Feature | Services | Talks to |
+|---|---|---|
+| Accounts | `AuthService`, `RefreshTokenService`, `UserService`, `AddressService`, `StaffService` | |
+| Catalog | `CategoryService`, `ProductService`, `VariantService`, `ProductImageService` | inventory, media |
+| Inventory | `InventoryService`: `levels`, `take`, `putBack`, `setLevel` | |
+| Promotions | `DiscountService`, `CouponService` | catalog |
+| Pricing | `PricingService.quote`, stores nothing | catalog, promotions, inventory |
+| Media | `MediaService` | |
+| Cart | `CartService` | pricing |
+| Payments | `PaymentService` | |
+| Orders | `CheckoutService`, `OrderService` | cart, pricing, inventory, promotions, payments |
+| Engagement | `ReviewService`, `WishlistService`, `ContactService`, `NewsletterService` | catalog, promotions |
+| Analytics | `SalesAnalyticsService`, `CatalogAnalyticsService`, `CustomerAnalyticsService` | read-only SQL (ADR-0007) |
+| Notifications | `NotificationService`, listens to stored events | |
+| Audit | `AuditService` | |
+
+Two services are worth protecting: `PricingService` (one call, whole basket) and `InventoryService` (three verbs hide locking,
+ledger and idempotency). No cycles between services; Spring refuses to start on one.
 
 ### Seams with more than one adapter
 
-Only these get a Java interface with several implementations:
+Only these get an interface with several implementations:
 
 | Seam | Adapters |
 |---|---|
@@ -100,9 +99,20 @@ Only these get a Java interface with several implementations:
 | `Mailer` | SMTP; capturing fake for tests |
 | `RateLimitStore` | Redis; local memory when Redis is down |
 
-Everything else is a class. Do not add `XService` + `XServiceImpl` pairs.
+### Spring first
 
-## 4. Layout to aim for
+| Need | Comes from |
+|---|---|
+| Sign-in check, equal timing for unknown accounts | `AuthenticationManager` with `DaoAuthenticationProvider` |
+| Verifying tokens, roles from the token | resource server auto-configuration (`spring.security.oauth2.resourceserver.jwt.*`) |
+| Issuing tokens | `NimbusJwtEncoder` |
+| Settings and refusing to start without them | `@ConfigurationProperties` with Bean Validation |
+| Created and updated times | `@CreationTimestamp`, `@UpdateTimestamp` |
+| Constructors, getters, builders, loggers | Lombok |
+| Pages, sorting, size limits | Spring Data web support settings |
+| Stored events | Spring Modulith event registry |
+
+## 4. Layout
 
 ```
 repository root
@@ -113,12 +123,14 @@ repository root
     ├── pom.xml  mvnw  Dockerfile  compose.yaml
     ├── src/main/java/com/ecommerce/store/
     │   ├── StoreApplication.java
-    │   ├── platform/  identity/  catalog/  inventory/  promotions/  pricing/
-    │   ├── media/  cart/  payments/  orders/  engagement/
-    │   └── analytics/  notifications/  audit/
-    │         e.g. orders/Orders.java, OrderPlaced.java          (interface)
-    │              orders/internal/web/OrderController.java
-    │              orders/internal/Checkout.java, OrderRepository.java, ...
+    │   ├── controller/   AuthController ...
+    │   ├── service/      AuthService, RefreshTokenService ...
+    │   ├── repository/   UserRepository ...
+    │   ├── model/        User, RefreshToken ...   enums/  Role, PaymentMethod ...
+    │   ├── dto/          request/  response/
+    │   ├── exception/    ApiException, GlobalExceptionHandler
+    │   ├── security/     SecurityConfig, JwtService, RequestFilter ...
+    │   └── config/       StoreProperties, AdminSeeder ...
     ├── src/main/resources/application.yaml  db/migration/
     └── src/test/java/...  contract/ reads docs/
 ```
@@ -132,8 +144,8 @@ repository root
    the client address, and calls `http://<store>-app:8080`.
 4. App filters, in order: request id → store check (400) → rate limit (429) → JWT (401; 403 for another
    store's token) → access policy (401 or 403).
-5. Controller: validates the DTO, calls one module method, returns a DTO. No logic.
-6. Module: short transaction, or a cache answer.
+5. Controller: validates the DTO, calls one service method, returns a DTO. No logic.
+6. Service: short transaction, or a cache answer.
 7. After commit: cache entries cleared, events delivered in the background.
 
 `X-Tenant-ID` must equal `STORE_ID`. The storefronts already send it. It stays as a safety check that a
@@ -147,15 +159,15 @@ every 5 minutes if incomplete. Listeners must tolerate running twice.
 
 | Event | Published by | Listeners |
 |---|---|---|
-| `OrderPlaced` | orders | notifications (confirmation), audit trail |
+| `OrderPlaced` | orders | notifications (confirmation) |
 | `OrderStatusChanged` | orders | notifications (shipped, delivered) |
 | `OrderCancelled` | orders | notifications |
 | `StockLow` | inventory | notifications (staff mail, at most one per variant per day) |
 | `Subscribed` | engagement | notifications (welcome coupon mail) |
-| `StaffCreated`, `UserDisabled` | identity | audit, token denial |
-| `CatalogChanged` | catalog, promotions | cache clearing |
+| `StaffCreated` | accounts | notifications |
 
-Stock and coupons are **not** event-driven. They change inside the order's transaction.
+Stock and coupons are **not** event-driven: they change inside the order's transaction. Neither are audit entries (same transaction) and
+cache clearing (after commit, on the same thread).
 
 ## 7. Runtime choices
 
@@ -178,7 +190,7 @@ Move one step when its trigger is real. Each step is configuration, not a rewrit
 | 1 | Third store, or memory above 85% | Resize to 8 GB |
 | 2 | Deploys must not interrupt, or CPU above 70% | Two copies per store behind Caddy. Already safe: no state in memory, jobs use ShedLock, limits in Redis |
 | 3 | Database is the bottleneck or backups matter more | Managed Postgres; add a read replica for analytics |
-| 4 | One module has a different load or team | Extract it along its interface; its events move to a broker |
+| 4 | One feature has a different load or team | Extract its services and tables; its events move to a broker |
 
 Not before step 4: Kafka, Kubernetes, a second service.
 

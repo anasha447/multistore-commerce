@@ -5,7 +5,7 @@ Each milestone ends with everything green and something you can run. Don't start
 | # | Milestone | Done when |
 |---|---|---|
 | 0 | **Foundation and contract.** Repository, frozen storefront, CI on every push, the 91 endpoints and their JSON read by tests (ADR-0017), local environment | every endpoint is listed with its shapes; CI green; storefront reaches the app |
-| 1 | **Skeleton.** Project on Java 21 with module walls, first migration, random ids, Testcontainers, CI, error shape, request id, store check | CI green; health is up; wrong store answers 400; the role and race checks in `DATA-MODEL.md` are tests |
+| 1 | **Skeleton.** Project on Java 21 with layers (ADR-0018), first migration, random ids, Testcontainers, CI, error shape, request id, store check | CI green; health is up; wrong store answers 400; the role and race checks in `DATA-MODEL.md` are tests |
 | 2 | **Identity and access.** Tokens, login, refresh, register, profile, addresses, staff, access policy, matrix test, audit | 15 contract checks green; the Matessa storefront signs in against the new app |
 | 3 | **Rate limits and cache base.** Redis, keys, fallback, generation counters, after-commit clearing | limit tests and Redis-down tests green |
 | 4 | **Catalog, media, inventory.** Categories, products, variants, images, stock ledger | 24 contract checks green; admin catalog screens work; second GET runs zero SQL |

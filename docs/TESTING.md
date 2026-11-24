@@ -8,10 +8,9 @@ so most of them move with small changes.
 | Layer | Tools | Proves |
 |---|---|---|
 | Rules | JUnit, AssertJ, no Spring | pricing, coupons, order states, SKU and order numbers |
-| Module | `@ApplicationModuleTest`, Testcontainers Postgres | one module through its interface |
 | HTTP | `@SpringBootTest(RANDOM_PORT)`, `RestTestClient`, Testcontainers Postgres and Redis | filters, JSON, status codes |
 | Contract | the contract documents, read by the tests | paths, status codes, JSON fields and types as documented |
-| Structure | `ApplicationModules.verify()` | no forbidden dependency, no cycle |
+| Structure | ArchUnit layer test | layers look in one direction, DTOs are records |
 | Storefront smoke | both storefront images + app in Compose | nothing in the frontend broke |
 | Load | k6 from another machine | memory, response times, cache hit rate |
 

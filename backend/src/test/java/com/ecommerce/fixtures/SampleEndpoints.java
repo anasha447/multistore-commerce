@@ -5,7 +5,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 
-import com.ecommerce.store.platform.ApiError;
+import com.ecommerce.store.exception.ApiException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -23,6 +23,7 @@ import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.web.SecurityFilterChain;
@@ -106,8 +107,8 @@ public class SampleEndpoints {
 		@GetMapping("/fail/{kind}")
 		void fail(@PathVariable String kind) {
 			throw switch (kind) {
-				case "not-found" -> ApiError.notFound("Cart item not found: 5");
-				case "code" -> ApiError.conflict("Still being placed", "REQUEST_IN_PROGRESS");
+				case "not-found" -> ApiException.notFound("Cart item not found: 5");
+				case "code" -> new ApiException(HttpStatus.CONFLICT, "Still being placed", "REQUEST_IN_PROGRESS");
 				case "stale" -> new OptimisticLockingFailureException("row 5 of orders");
 				case "duplicate" -> new DataIntegrityViolationException("uk_users_email");
 				case "database" -> new DataAccessResourceFailureException("10.0.0.5 refused");
