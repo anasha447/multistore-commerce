@@ -120,7 +120,7 @@ repository root
     │              orders/internal/web/OrderController.java
     │              orders/internal/Checkout.java, OrderRepository.java, ...
     ├── src/main/resources/application.yaml  db/migration/
-    └── src/test/java/...  src/test/resources/contract/*.json
+    └── src/test/java/...  contract/ reads docs/
 ```
 
 ## 5. A request, start to finish
