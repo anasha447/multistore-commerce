@@ -119,7 +119,8 @@ class TokenTests {
 	}
 
 	@Test
-	void aMissingOrDisabledAccountIsRefusedAtOnce() {
+	void disabledStaffAreRefusedAtOnce() {
+		user.setRoles(Set.of(Role.MANAGER));
 		String token = jwt.issue(user);
 		jdbc.sql("update users set enabled = false where id = ?").param(user.getId()).update();
 		assertThat(status(token)).isEqualTo(401);

@@ -41,7 +41,7 @@ s:<store>:v1:rev:<productId>:<gen>:<page>
 s:<store>:v1:me:<userId>
 s:<store>:v1:cart:<userId>
 s:<store>:rl:...                              rate limits (SECURITY.md)
-s:<store>:deny:<userId>                       disabled accounts, 15 min
+s:<store>:deny:<userId>                       disabled accounts, 17 min
 ```
 
 - Every store has its own Redis user, allowed to touch only `s:<store>:*`.
@@ -90,8 +90,9 @@ clear. Bounded by the lifetimes above, and harmless because checkout never reads
 JSON of the response DTO, type-bound. Never entities, passwords, hashes, tokens, or order data.
 `me` and `addresses` contain personal data: Redis is not exposed, not persisted, and entries are short-lived.
 
-`me` is for display. Permission decisions use the JWT plus the `deny` key, so disabling an account takes effect at
-once (the old system needed up to 15 minutes).
+`me` is for display. Permission decisions use the JWT and whether the account is still enabled: staff are looked up in Postgres on every
+request, shoppers in the `deny` key (17 minutes, also kept in the memory of the copy that set it, because Redis may evict it) or in Postgres
+while Redis is gone. Disabling takes effect at once.
 
 ## 6. The layers in front
 

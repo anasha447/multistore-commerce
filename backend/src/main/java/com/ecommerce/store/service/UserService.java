@@ -3,12 +3,15 @@ package com.ecommerce.store.service;
 import java.util.function.Consumer;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import com.ecommerce.store.config.CacheNames;
 import com.ecommerce.store.dto.request.ChangePasswordRequest;
 import com.ecommerce.store.dto.request.UpdateProfileRequest;
 import com.ecommerce.store.dto.response.UserResponse;
@@ -52,11 +55,13 @@ public class UserService {
 		}
 	}
 
+	@Cacheable(cacheNames = CacheNames.ME, key = "#userId", sync = true)
 	@Transactional(readOnly = true)
 	public UserResponse me(Long userId) {
 		return UserResponse.from(find(userId));
 	}
 
+	@CacheEvict(cacheNames = CacheNames.ME, key = "#userId")
 	@Transactional
 	public UserResponse update(Long userId, UpdateProfileRequest request) {
 		User user = find(userId);
@@ -67,6 +72,7 @@ public class UserService {
 	}
 
 	/** Ends every sign-in of the account. Hashing happens outside the transaction. */
+	@CacheEvict(cacheNames = CacheNames.ME, key = "#userId")
 	public void changePassword(Long userId, ChangePasswordRequest request) {
 		if (!passwordEncoder.matches(request.currentPassword(), find(userId).getPasswordHash())) {
 			throw ApiException.badRequest("Current password is incorrect");

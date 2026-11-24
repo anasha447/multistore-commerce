@@ -1,12 +1,14 @@
 package com.ecommerce.store.service;
 
+import java.util.List;
+
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.ecommerce.store.config.CacheNames;
 import com.ecommerce.store.dto.request.AddressRequest;
 import com.ecommerce.store.dto.response.AddressResponse;
 import com.ecommerce.store.exception.ApiException;
@@ -23,12 +25,13 @@ public class AddressService {
 
 	private final UserRepository users;
 
+	@Cacheable(cacheNames = CacheNames.ADDRESSES, key = "#userId", sync = true)
 	@Transactional(readOnly = true)
-	public Page<AddressResponse> list(Long userId, Pageable pageable) {
-		return addresses.findByUserId(userId, Paging.sorted(pageable, Sort.by("createdAt"), "createdAt"))
-			.map(AddressResponse::from);
+	public List<AddressResponse> all(Long userId) {
+		return addresses.findByUserIdOrderByCreatedAt(userId).stream().map(AddressResponse::from).toList();
 	}
 
+	@CacheEvict(cacheNames = CacheNames.ADDRESSES, key = "#userId")
 	@Transactional
 	public AddressResponse create(Long userId, AddressRequest request) {
 		Address address = new Address();
@@ -36,11 +39,13 @@ public class AddressService {
 		return save(address, request);
 	}
 
+	@CacheEvict(cacheNames = CacheNames.ADDRESSES, key = "#userId")
 	@Transactional
 	public AddressResponse update(Long userId, Long id, AddressRequest request) {
 		return save(find(userId, id), request);
 	}
 
+	@CacheEvict(cacheNames = CacheNames.ADDRESSES, key = "#userId")
 	@Transactional
 	public void delete(Long userId, Long id) {
 		addresses.delete(find(userId, id));

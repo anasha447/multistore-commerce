@@ -19,6 +19,7 @@ import com.ecommerce.store.dto.request.AddressRequest;
 import com.ecommerce.store.dto.response.AddressResponse;
 import com.ecommerce.store.security.CurrentUserId;
 import com.ecommerce.store.service.AddressService;
+import com.ecommerce.store.service.Paging;
 
 @RestController
 @RequestMapping("/api/users/me/addresses")
@@ -29,7 +30,7 @@ class AddressController {
 
 	@GetMapping
 	Page<AddressResponse> list(@CurrentUserId Long userId, Pageable pageable) {
-		return addressService.list(userId, pageable);
+		return Paging.slice(addressService.all(userId), pageable);
 	}
 
 	@PostMapping
