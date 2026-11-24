@@ -28,7 +28,7 @@ jobs:
           java-version: "21"
           cache: maven
       # Maven Central drops a connection now and then
-      - run: for i in 1 2 3; do ./mvnw -B -ntp -q dependency:go-offline && break; sleep 20; done
+      - run: for i in 1 2 3; do timeout 120 ./mvnw -B -ntp -q dependency:resolve dependency:resolve-plugins && break; sleep 10; done || true
       - run: ./mvnw -B -ntp verify
 
   storefront:
