@@ -89,5 +89,5 @@ through Caddy with a fake Cloudflare header. Include: product images load, and a
 ./mvnw verify
 ```
 
-On the owner's Windows machine set `JAVA_HOME` to JDK 21, `TESTCONTAINERS_RYUK_DISABLED=true` and
-`JAVA_TOOL_OPTIONS=-Djava.net.preferIPv6Addresses=true`. Linux CI needs only JDK 21 and Docker.
+On the owner's Windows machine set `JAVA_HOME` to JDK 21 and `TESTCONTAINERS_RYUK_DISABLED=true`. The build itself sets the IPv4 stack,
+without which Java cannot reach Docker ports there. Linux CI needs only JDK 21 and Docker.
