@@ -11,7 +11,7 @@ import com.ecommerce.store.config.StoreProperties;
 
 class ClientAddressTests {
 
-	private final ClientAddress addresses = new ClientAddress(new StoreProperties("matessa", "", "", "localhost"));
+	private final ClientAddress addresses = new ClientAddress(new StoreProperties("matessa", "", "", "localhost", true, 100));
 
 	@Test
 	void theStorefrontSpeaksForTheShopper() {
@@ -23,9 +23,9 @@ class ClientAddressTests {
 	void nobodyElseDoes() {
 		assertThat(addresses.of(from("10.0.0.9", "203.0.113.7"))).contains("10.0.0.9");
 		assertThat(addresses.of(from("10.0.0.9", null))).contains("10.0.0.9");
-		ClientAddress nobodyTrusted = new ClientAddress(new StoreProperties("matessa", "", "", ""));
+		ClientAddress nobodyTrusted = new ClientAddress(new StoreProperties("matessa", "", "", "", true, 100));
 		assertThat(nobodyTrusted.of(from("127.0.0.1", "203.0.113.7"))).contains("127.0.0.1");
-		ClientAddress unknownName = new ClientAddress(new StoreProperties("matessa", "", "", "no-such-host.invalid"));
+		ClientAddress unknownName = new ClientAddress(new StoreProperties("matessa", "", "", "no-such-host.invalid", true, 100));
 		assertThat(unknownName.of(from("127.0.0.1", "203.0.113.7"))).contains("127.0.0.1");
 	}
 

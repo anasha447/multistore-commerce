@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.slf4j.MDC;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.servlet.HandlerExceptionResolver;
@@ -28,6 +29,8 @@ import com.ecommerce.store.exception.ApiException;
 class RequestFilter extends OncePerRequestFilter {
 
 	private final StoreProperties store;
+
+	private final RateLimiter rateLimiter;
 
 	private final HandlerExceptionResolver handlerExceptionResolver;
 
@@ -48,6 +51,10 @@ class RequestFilter extends OncePerRequestFilter {
 			boolean image = request.getServletPath().startsWith("/media/");
 			if (!image && !store.id().equals(request.getHeader("X-Tenant-ID"))) {
 				throw ApiException.badRequest("Unknown store.");
+			}
+			// the storefront signs people out when a refresh fails, so a flood must not stop those
+			if (!request.getServletPath().equals("/api/auth/refresh") && !rateLimiter.storeIsCalm()) {
+				throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "The shop is very busy. Please try again.", null);
 			}
 			chain.doFilter(request, response);
 		}

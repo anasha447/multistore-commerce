@@ -28,7 +28,7 @@ Exact fields and validation are in `CONTRACT-DTOS.md`.
 | 413, 415 | upload too large, wrong content type |
 | 422 | `IDEMPOTENCY_KEY_REUSED` |
 | 429 | rate limit, with `Retry-After` |
-| 503 | database unavailable |
+| 503 | database unavailable, or the whole-store limit |
 
 ## 2. Access words
 

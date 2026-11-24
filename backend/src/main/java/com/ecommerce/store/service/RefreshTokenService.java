@@ -1,16 +1,12 @@
 package com.ecommerce.store.service;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
-import java.util.HexFormat;
 import java.util.UUID;
 
 import lombok.RequiredArgsConstructor;
-import lombok.SneakyThrows;
 import org.springframework.security.crypto.keygen.Base64StringKeyGenerator;
 import org.springframework.security.crypto.keygen.StringKeyGenerator;
 import org.springframework.stereotype.Service;
@@ -22,6 +18,7 @@ import com.ecommerce.store.model.RefreshToken;
 import com.ecommerce.store.model.User;
 import com.ecommerce.store.repository.RefreshTokenRepository;
 import com.ecommerce.store.repository.UserRepository;
+import com.ecommerce.store.security.Hashes;
 import com.ecommerce.store.security.JwtService;
 
 /**
@@ -64,10 +61,10 @@ public class RefreshTokenService {
 	@Transactional(noRollbackFor = ApiException.class)
 	public TokenResponse refresh(String value) {
 		ApiException over = ApiException.unauthorized("Refresh token expired or revoked");
-		Long owner = tokens.findOwner(hash(value))
+		Long owner = tokens.findOwner(Hashes.sha256(value))
 			.orElseThrow(() -> ApiException.unauthorized("Invalid refresh token"));
 		User user = users.findAndLock(owner).orElseThrow(() -> over);
-		RefreshToken token = tokens.findByTokenHash(hash(value)).orElseThrow(() -> over);
+		RefreshToken token = tokens.findByTokenHash(Hashes.sha256(value)).orElseThrow(() -> over);
 		Instant now = clock.instant();
 		if (token.isRevoked()) {
 			boolean justRotated = token.getRotatedAt() != null && !now.isAfter(token.getRotatedAt().plus(GRACE));
@@ -87,7 +84,7 @@ public class RefreshTokenService {
 	/** Ends the sign-in the token belongs to. Unknown tokens are fine. */
 	@Transactional
 	public void logout(String value) {
-		tokens.findOwner(hash(value)).flatMap(users::findAndLock).flatMap(user -> tokens.findByTokenHash(hash(value)))
+		tokens.findOwner(Hashes.sha256(value)).flatMap(users::findAndLock).flatMap(user -> tokens.findByTokenHash(Hashes.sha256(value)))
 			.ifPresent(token -> tokens.revokeFamily(token.getFamilyId()));
 	}
 
@@ -95,17 +92,11 @@ public class RefreshTokenService {
 		String value = RANDOM.generateKey();
 		tokens.save(RefreshToken.builder()
 			.userId(user.getId())
-			.tokenHash(hash(value))
+			.tokenHash(Hashes.sha256(value))
 			.familyId(family)
 			.expiresAt(clock.instant().plus(LIFETIME))
 			.build());
 		return new TokenResponse(jwt.issue(user), value, "Bearer", JwtService.LIFETIME.toSeconds());
-	}
-
-	@SneakyThrows
-	private static String hash(String value) {
-		byte[] digest = MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8));
-		return HexFormat.of().formatHex(digest);
 	}
 
 }
