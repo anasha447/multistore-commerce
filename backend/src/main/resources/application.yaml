@@ -1,0 +1,19 @@
+spring:
+  application:
+    name: store
+  docker:
+    compose:
+      enabled: false
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  threads:
+    virtual:
+      enabled: false
+
+server:
+  shutdown: graceful
+  tomcat:
+    threads:
+      max: 50
