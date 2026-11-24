@@ -37,6 +37,13 @@ class RequestFilter extends OncePerRequestFilter {
 		String id = UUID.randomUUID().toString();
 		response.setHeader("X-Request-Id", id);
 		try (var ignored = MDC.putCloseable("requestId", id)) {
+			answerFailures(request, response, chain);
+		}
+	}
+
+	private void answerFailures(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
+			throws ServletException, IOException {
+		try {
 			// the decoded, normalised path: a disguised /api path is still an /api path
 			boolean image = request.getServletPath().startsWith("/media/");
 			if (!image && !store.id().equals(request.getHeader("X-Tenant-ID"))) {

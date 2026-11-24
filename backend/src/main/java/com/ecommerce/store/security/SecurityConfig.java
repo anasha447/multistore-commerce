@@ -1,7 +1,14 @@
 package com.ecommerce.store.security;
 
+import static org.springframework.http.HttpMethod.DELETE;
+import static org.springframework.http.HttpMethod.GET;
+import static org.springframework.http.HttpMethod.PATCH;
+import static org.springframework.http.HttpMethod.POST;
+import static org.springframework.http.HttpMethod.PUT;
+
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
+import java.util.List;
 
 import jakarta.servlet.DispatcherType;
 import org.springframework.beans.factory.annotation.Value;
@@ -17,6 +24,7 @@ import org.springframework.security.authentication.dao.DaoAuthenticationProvider
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.annotation.web.configurers.AuthorizeHttpRequestsConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -30,6 +38,7 @@ import org.springframework.util.Assert;
 import org.springframework.web.servlet.HandlerExceptionResolver;
 
 import com.ecommerce.store.model.User;
+import com.ecommerce.store.model.enums.Role;
 import com.ecommerce.store.repository.UserRepository;
 
 /**
@@ -55,18 +64,66 @@ class SecurityConfig {
 				response, null, jwt.namesAnotherStore(request) ? new AccessDeniedException("another store") : ex);
 		return http.csrf(AbstractHttpConfigurer::disable)
 			.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-			.authorizeHttpRequests(requests -> requests.dispatcherTypeMatchers(DispatcherType.ERROR)
-				.permitAll()
-				.requestMatchers(HttpMethod.POST, "/api/auth/*")
-				.permitAll()
-				.anyRequest()
-				.denyAll())
+			.authorizeHttpRequests(SecurityConfig::accessPolicy)
 			// a bad token is 401 on public paths too: the storefront refreshes on that answer
 			.oauth2ResourceServer(server -> server.authenticationEntryPoint(refuse).jwt(Customizer.withDefaults()))
 			.exceptionHandling(handling -> handling.authenticationEntryPoint(refuse)
 				.accessDeniedHandler((request, response, ex) -> handlerExceptionResolver.resolveException(request,
 						response, null, ex)))
 			.build();
+	}
+
+	/**
+	 * Who may call what. The first matching line decides, the last one closes everything else. Ownership is
+	 * checked by the services. A test compares all 91 documented endpoints with it.
+	 */
+	private static void accessPolicy(
+			AuthorizeHttpRequestsConfigurer<HttpSecurity>.AuthorizationManagerRequestMatcherRegistry requests) {
+		String[] staff = { Role.MANAGER.name(), Role.ADMIN.name() };
+		String admin = Role.ADMIN.name();
+
+		requests.dispatcherTypeMatchers(DispatcherType.ERROR).permitAll();
+
+		// admin
+		requests.requestMatchers("/api/admin/users/**").hasRole(admin);
+		requests.requestMatchers(GET, "/api/analytics/customers").hasRole(admin);
+
+		// staff
+		requests.requestMatchers(GET, "/api/orders/admin", "/api/contact", "/api/subscribers", "/api/analytics/**",
+				"/api/coupons", "/api/coupons/*")
+			.hasAnyRole(staff);
+		requests.requestMatchers(PUT, "/api/orders/*/status", "/api/orders/*/shipping").hasAnyRole(staff);
+		requests.requestMatchers(PATCH, "/api/contact/*/status").hasAnyRole(staff);
+		requests
+			.requestMatchers(POST, "/api/categories", "/api/products", "/api/products/*/images",
+					"/api/products/*/images/upload", "/api/products/*/variants", "/api/coupons", "/api/discounts")
+			.hasAnyRole(staff);
+		for (HttpMethod change : List.of(PUT, DELETE)) {
+			requests
+				.requestMatchers(change, "/api/categories/*", "/api/products/*", "/api/variants/*", "/api/images/*",
+						"/api/coupons/*", "/api/discounts/*")
+				.hasAnyRole(staff);
+		}
+
+		// everyone
+		requests
+			.requestMatchers(GET, "/media/*/*", "/api/categories/**", "/api/products/**", "/api/variants/*",
+					"/api/discounts/*", "/api/orders/payment-methods", "/api/orders/track")
+			.permitAll();
+		requests
+			.requestMatchers(POST, "/api/auth/*", "/api/coupons/validate", "/api/contact", "/api/subscribers",
+					"/api/cart/price", "/api/orders/guest")
+			.permitAll();
+
+		// signed in
+		requests.requestMatchers("/api/users/me/**", "/api/cart/**", "/api/wishlist/**").authenticated();
+		requests.requestMatchers(GET, "/api/orders", "/api/orders/*", "/api/orders/by-number/*", "/api/orders/*/history")
+			.authenticated();
+		requests.requestMatchers(POST, "/api/orders", "/api/orders/*/cancel", "/api/products/*/reviews").authenticated();
+		requests.requestMatchers(PUT, "/api/reviews/*").authenticated();
+		requests.requestMatchers(DELETE, "/api/reviews/*").authenticated();
+
+		requests.anyRequest().denyAll();
 	}
 
 	@Bean
