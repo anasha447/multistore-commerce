@@ -1,0 +1,7 @@
+logging:
+  structured:
+    format:
+      console: logstash
+    json:
+      add:
+        store: ${STORE_ID}
