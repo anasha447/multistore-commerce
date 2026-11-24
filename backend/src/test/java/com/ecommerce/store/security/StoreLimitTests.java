@@ -19,7 +19,7 @@ import com.ecommerce.store.exception.ApiException;
 
 class StoreLimitTests {
 
-	private final StoreProperties store = new StoreProperties("matessa", "", "", "", true, 3);
+	private final StoreProperties store = new StoreProperties("matessa", "", "", "", true, 3, 1);
 
 	private final RateLimiter limiter = new RateLimiter(null, null, store,
 			Clock.fixed(Instant.parse("2026-11-24T10:00:00Z"), ZoneOffset.UTC));
