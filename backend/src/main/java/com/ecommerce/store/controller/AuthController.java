@@ -19,8 +19,8 @@ import com.ecommerce.store.dto.response.UserResponse;
 import com.ecommerce.store.model.enums.RateLimitRule;
 import com.ecommerce.store.security.RateLimited;
 import com.ecommerce.store.security.RateLimiter;
-import com.ecommerce.store.service.AuthService;
-import com.ecommerce.store.service.RefreshTokenService;
+import com.ecommerce.store.service.interfaces.AuthService;
+import com.ecommerce.store.service.interfaces.RefreshTokenService;
 
 @RestController
 @RequestMapping("/api/auth")

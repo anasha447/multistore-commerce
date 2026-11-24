@@ -16,7 +16,7 @@ import com.ecommerce.store.dto.response.UserResponse;
 import com.ecommerce.store.model.enums.RateLimitRule;
 import com.ecommerce.store.security.CurrentUserId;
 import com.ecommerce.store.security.RateLimited;
-import com.ecommerce.store.service.UserService;
+import com.ecommerce.store.service.interfaces.UserService;
 
 @RestController
 @RequestMapping("/api/users/me")

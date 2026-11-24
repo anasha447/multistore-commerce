@@ -16,6 +16,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.transaction.IllegalTransactionStateException;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
+import com.ecommerce.store.service.interfaces.AuditService;
 import com.ecommerce.store.Api;
 import com.ecommerce.store.Api.Answer;
 import com.ecommerce.store.IntegrationTest;

@@ -25,6 +25,11 @@ public class ApiException extends RuntimeException {
 		return new ApiException(HttpStatus.UNAUTHORIZED, message, null);
 	}
 
+	/** Every failed sign-in answers this, whatever the reason. */
+	public static ApiException badCredentials() {
+		return unauthorized("Invalid email or password.");
+	}
+
 	/** Missing, or not the caller's. Both look the same from outside. */
 	public static ApiException notFound(String message) {
 		return new ApiException(HttpStatus.NOT_FOUND, message, null);

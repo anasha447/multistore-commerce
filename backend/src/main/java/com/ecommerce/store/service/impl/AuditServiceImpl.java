@@ -1,4 +1,4 @@
-package com.ecommerce.store.service;
+package com.ecommerce.store.service.impl;
 
 import java.util.TreeSet;
 
@@ -17,11 +17,11 @@ import com.ecommerce.store.model.User;
 import com.ecommerce.store.model.enums.Role;
 import com.ecommerce.store.repository.AuditRepository;
 import com.ecommerce.store.security.ClientAddress;
+import com.ecommerce.store.service.interfaces.AuditService;
 
-/** Who changed what. Written in the transaction of the change, so there is never one without the other. */
 @Service
 @RequiredArgsConstructor
-public class AuditService {
+class AuditServiceImpl implements AuditService {
 
 	private final AuditRepository audit;
 
@@ -32,7 +32,7 @@ public class AuditService {
 	/** The current request; Spring injects a proxy. */
 	private final HttpServletRequest request;
 
-	/** Pass responses, never entities: they hold hashes. */
+	@Override
 	@Transactional(propagation = Propagation.MANDATORY)
 	public void record(String action, String entity, Long entityId, Object before, Object after) {
 		Authentication caller = SecurityContextHolder.getContext().getAuthentication();
@@ -40,6 +40,7 @@ public class AuditService {
 		add(Long.valueOf(caller.getName()), roles, action, entity, entityId, before, after);
 	}
 
+	@Override
 	@Transactional(propagation = Propagation.MANDATORY)
 	public void recordSignIn(User user) {
 		if (user.getRoles().contains(Role.MANAGER) || user.getRoles().contains(Role.ADMIN)) {
@@ -47,6 +48,7 @@ public class AuditService {
 		}
 	}
 
+	@Override
 	@Transactional
 	public void recordFailedSignIn(String email) {
 		audit.addFailedStaffSignIn(User.normaliseEmail(email), clientIp(), MDC.get("requestId"));

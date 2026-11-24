@@ -1,4 +1,4 @@
-package com.ecommerce.store.service;
+package com.ecommerce.store.service.impl;
 
 import java.util.Set;
 
@@ -20,11 +20,14 @@ import com.ecommerce.store.model.enums.Role;
 import com.ecommerce.store.repository.RefreshTokenRepository;
 import com.ecommerce.store.repository.UserRepository;
 import com.ecommerce.store.security.DeniedAccounts;
+import com.ecommerce.store.service.Paging;
+import com.ecommerce.store.service.interfaces.AuditService;
+import com.ecommerce.store.service.interfaces.StaffService;
+import com.ecommerce.store.service.interfaces.UserService;
 
-/** What an admin does with accounts. */
 @Service
 @RequiredArgsConstructor
-public class StaffService {
+class StaffServiceImpl implements StaffService {
 
 	private final UserRepository users;
 
@@ -36,6 +39,7 @@ public class StaffService {
 
 	private final DeniedAccounts deniedAccounts;
 
+	@Override
 	public AdminUserResponse create(CreateStaffRequest request) {
 		User user = User.builder()
 			.email(request.email())
@@ -50,25 +54,28 @@ public class StaffService {
 						created.getId(), null, AdminUserResponse.from(created))));
 	}
 
+	@Override
 	@Transactional(readOnly = true)
 	public Page<AdminUserResponse> list(Role role, Boolean enabled, Pageable pageable) {
 		return users.search(role, enabled, Paging.sorted(pageable, Sort.by("createdAt"), "createdAt", "email", "firstName", "lastName"))
 			.map(AdminUserResponse::from);
 	}
 
+	@Override
 	@Transactional(readOnly = true)
 	public AdminUserResponse get(Long id) {
-		return AdminUserResponse.from(users.findById(id).orElseThrow(StaffService::notFound));
+		return AdminUserResponse.from(users.findById(id).orElseThrow(StaffServiceImpl::notFound));
 	}
 
-	/** Disabling ends every sign-in; the access token is refused on its next request, see ActiveAccountValidator. */
+	/** The access token is refused by ActiveAccountValidator. */
+	@Override
 	@Transactional
 	@CacheEvict(cacheNames = CacheNames.ME, key = "#id")
 	public AdminUserResponse changeStatus(Long adminId, Long id, boolean enabled) {
 		if (adminId.equals(id)) {
 			throw ApiException.conflict("You cannot change the status of your own account");
 		}
-		User user = users.findAndLock(id).orElseThrow(StaffService::notFound);
+		User user = users.findAndLock(id).orElseThrow(StaffServiceImpl::notFound);
 		AdminUserResponse before = AdminUserResponse.from(user);
 		user.setEnabled(enabled);
 		if (enabled) {

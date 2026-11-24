@@ -1,4 +1,4 @@
-package com.ecommerce.store.service;
+package com.ecommerce.store.service.impl;
 
 import java.util.List;
 
@@ -15,22 +15,24 @@ import com.ecommerce.store.exception.ApiException;
 import com.ecommerce.store.model.Address;
 import com.ecommerce.store.repository.AddressRepository;
 import com.ecommerce.store.repository.UserRepository;
+import com.ecommerce.store.service.interfaces.AddressService;
 
-/** An address of someone else does not exist for the caller. */
 @Service
 @RequiredArgsConstructor
-public class AddressService {
+class AddressServiceImpl implements AddressService {
 
 	private final AddressRepository addresses;
 
 	private final UserRepository users;
 
+	@Override
 	@Cacheable(cacheNames = CacheNames.ADDRESSES, key = "#userId", sync = true)
 	@Transactional(readOnly = true)
 	public List<AddressResponse> all(Long userId) {
 		return addresses.findByUserIdOrderByCreatedAt(userId).stream().map(AddressResponse::from).toList();
 	}
 
+	@Override
 	@CacheEvict(cacheNames = CacheNames.ADDRESSES, key = "#userId")
 	@Transactional
 	public AddressResponse create(Long userId, AddressRequest request) {
@@ -39,12 +41,14 @@ public class AddressService {
 		return save(address, request);
 	}
 
+	@Override
 	@CacheEvict(cacheNames = CacheNames.ADDRESSES, key = "#userId")
 	@Transactional
 	public AddressResponse update(Long userId, Long id, AddressRequest request) {
 		return save(find(userId, id), request);
 	}
 
+	@Override
 	@CacheEvict(cacheNames = CacheNames.ADDRESSES, key = "#userId")
 	@Transactional
 	public void delete(Long userId, Long id) {

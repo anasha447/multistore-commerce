@@ -1,4 +1,4 @@
-package com.ecommerce.store.service;
+package com.ecommerce.store.service.impl;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -20,6 +20,8 @@ import com.ecommerce.store.repository.RefreshTokenRepository;
 import com.ecommerce.store.repository.UserRepository;
 import com.ecommerce.store.security.Hashes;
 import com.ecommerce.store.security.JwtService;
+import com.ecommerce.store.service.interfaces.AuditService;
+import com.ecommerce.store.service.interfaces.RefreshTokenService;
 
 /**
  * Sign-ins and their refresh tokens. Every change locks the account's row first, so a token being
@@ -27,7 +29,7 @@ import com.ecommerce.store.security.JwtService;
  */
 @Service
 @RequiredArgsConstructor
-public class RefreshTokenService {
+class RefreshTokenServiceImpl implements RefreshTokenService {
 
 	private static final Duration LIFETIME = Duration.ofDays(7);
 
@@ -47,17 +49,18 @@ public class RefreshTokenService {
 
 	private final Clock clock;
 
-	/** A new sign-in, unless the account was locked, disabled or given a new password meanwhile. */
+	@Override
 	@Transactional
 	public TokenResponse open(User user) {
 		if (users.clearFailures(user.getId(), user.getPasswordHash(), clock.instant()) == 0) {
-			throw AuthService.refused();
+			throw ApiException.badCredentials();
 		}
 		audit.recordSignIn(user);
 		return issue(user, UUID.randomUUID().toString());
 	}
 
 	/** What a refusal revokes stays revoked. */
+	@Override
 	@Transactional(noRollbackFor = ApiException.class)
 	public TokenResponse refresh(String value) {
 		ApiException over = ApiException.unauthorized("Refresh token expired or revoked");
@@ -81,7 +84,7 @@ public class RefreshTokenService {
 		return issue(user, token.getFamilyId());
 	}
 
-	/** Ends the sign-in the token belongs to. Unknown tokens are fine. */
+	@Override
 	@Transactional
 	public void logout(String value) {
 		tokens.findOwner(Hashes.sha256(value)).flatMap(users::findAndLock).flatMap(user -> tokens.findByTokenHash(Hashes.sha256(value)))

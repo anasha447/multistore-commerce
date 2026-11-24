@@ -1,4 +1,4 @@
-package com.ecommerce.store.service;
+package com.ecommerce.store.service.impl;
 
 import java.util.function.Consumer;
 
@@ -20,10 +20,11 @@ import com.ecommerce.store.model.User;
 import com.ecommerce.store.repository.RefreshTokenRepository;
 import com.ecommerce.store.repository.UserRepository;
 import com.ecommerce.store.security.PasswordPolicy;
+import com.ecommerce.store.service.interfaces.UserService;
 
 @Service
 @RequiredArgsConstructor
-public class UserService {
+class UserServiceImpl implements UserService {
 
 	private final UserRepository users;
 
@@ -36,6 +37,7 @@ public class UserService {
 	private final TransactionTemplate transaction;
 
 	/** Hashing is slow on purpose and happens outside any transaction. */
+	@Override
 	public User create(User user, String password, String taken, Consumer<User> inSameTransaction) {
 		passwordPolicy.requireUncommon(password);
 		user.setEmail(User.normaliseEmail(user.getEmail()));
@@ -55,12 +57,14 @@ public class UserService {
 		}
 	}
 
+	@Override
 	@Cacheable(cacheNames = CacheNames.ME, key = "#userId", sync = true)
 	@Transactional(readOnly = true)
 	public UserResponse me(Long userId) {
 		return UserResponse.from(find(userId));
 	}
 
+	@Override
 	@CacheEvict(cacheNames = CacheNames.ME, key = "#userId")
 	@Transactional
 	public UserResponse update(Long userId, UpdateProfileRequest request) {
@@ -71,7 +75,8 @@ public class UserService {
 		return UserResponse.from(user);
 	}
 
-	/** Ends every sign-in of the account. Hashing happens outside the transaction. */
+	/** Hashing happens outside the transaction. */
+	@Override
 	@CacheEvict(cacheNames = CacheNames.ME, key = "#userId")
 	public void changePassword(Long userId, ChangePasswordRequest request) {
 		if (!passwordEncoder.matches(request.currentPassword(), find(userId).getPasswordHash())) {

@@ -52,8 +52,9 @@ Root package `com.ecommerce.store`, packages by layer (ADR-0018).
 
 | Package | Holds | May use |
 |---|---|---|
-| `controller` | `@RestController` classes: validate, call one service method, return a DTO. No logic, no transaction | `service`, `dto`, `model.enums` |
-| `service` | Business rules and transactions. Plain classes, no `Service` + `ServiceImpl` pairs | `repository`, `model`, `dto`, `exception`, other services |
+| `controller` | `@RestController` classes: validate, call one service method, return a DTO. No logic, no transaction | `service.interfaces`, `dto`, `model.enums` |
+| `service.interfaces` | What each service offers, one interface each (ADR-0019) | `model`, `dto` |
+| `service.impl` | Business rules and transactions, one `<Interface>Impl` each, not public | `service.interfaces`, `repository`, `model`, `dto`, `exception`, `security`, `config` |
 | `repository` | Spring Data interfaces and their queries | `model` |
 | `model` | JPA entities | `model.enums` |
 | `model.enums` | `Role`, `AddressType`, `OrderStatus`, `PaymentMethod`, `PaymentStatus`, `ShippingStatus`, `DiscountType`, `ContactQueryStatus` | nothing |
@@ -63,7 +64,7 @@ Root package `com.ecommerce.store`, packages by layer (ADR-0018).
 | `config` | Settings, clock, seed, cache and event configuration | everything |
 
 A layer test (ArchUnit) fails the build when a controller touches a repository, a repository or entity
-looks upward, or a DTO is not a record.
+looks upward, a DTO is not a record, or a service is not an interface with its implementation.
 
 ### Features
 
@@ -90,7 +91,7 @@ ledger and idempotency). No cycles between services; Spring refuses to start on 
 
 ### Seams with more than one adapter
 
-Only these get an interface with several implementations:
+Every service has an interface with one implementation. Only these have several:
 
 | Seam | Adapters |
 |---|---|
@@ -124,7 +125,7 @@ repository root
     ├── src/main/java/com/ecommerce/store/
     │   ├── StoreApplication.java
     │   ├── controller/   AuthController ...
-    │   ├── service/      AuthService, RefreshTokenService ...
+    │   ├── service/      interfaces/  AuthService ...   impl/  AuthServiceImpl ...
     │   ├── repository/   UserRepository ...
     │   ├── model/        User, RefreshToken ...   enums/  Role, PaymentMethod ...
     │   ├── dto/          request/  response/

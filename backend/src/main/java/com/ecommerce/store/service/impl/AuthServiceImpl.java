@@ -1,4 +1,4 @@
-package com.ecommerce.store.service;
+package com.ecommerce.store.service.impl;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -20,11 +20,14 @@ import com.ecommerce.store.exception.ApiException;
 import com.ecommerce.store.model.User;
 import com.ecommerce.store.model.enums.Role;
 import com.ecommerce.store.repository.UserRepository;
+import com.ecommerce.store.service.interfaces.AuditService;
+import com.ecommerce.store.service.interfaces.AuthService;
+import com.ecommerce.store.service.interfaces.RefreshTokenService;
+import com.ecommerce.store.service.interfaces.UserService;
 
-/** Register and sign in. */
 @Service
 @RequiredArgsConstructor
-public class AuthService {
+class AuthServiceImpl implements AuthService {
 
 	private static final int ALLOWED_FAILURES = 5;
 
@@ -42,6 +45,7 @@ public class AuthService {
 
 	private final Clock clock;
 
+	@Override
 	public UserResponse register(RegisterRequest request) {
 		User user = User.builder()
 			.email(request.email())
@@ -55,7 +59,7 @@ public class AuthService {
 				}));
 	}
 
-	/** Every way to fail looks the same and takes as long. */
+	@Override
 	public TokenResponse login(LoginRequest request) {
 		try {
 			var attempt = UsernamePasswordAuthenticationToken.unauthenticated(request.email(), request.password());
@@ -65,16 +69,12 @@ public class AuthService {
 			Instant now = clock.instant();
 			users.countFailure(User.normaliseEmail(request.email()), ALLOWED_FAILURES, now.plus(LOCK), now);
 			audit.recordFailedSignIn(request.email());
-			throw refused();
+			throw ApiException.badCredentials();
 		}
 		catch (AccountStatusException | ApiException ex) {
 			audit.recordFailedSignIn(request.email());
-			throw refused();
+			throw ApiException.badCredentials();
 		}
-	}
-
-	static ApiException refused() {
-		return ApiException.unauthorized("Invalid email or password.");
 	}
 
 }

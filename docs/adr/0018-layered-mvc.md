@@ -1,6 +1,6 @@
 # ADR-0018: Layered MVC packages instead of modules
 
-Status: accepted, 24 November 2026. Replaces the package structure of ADR-0001; the rest of ADR-0001 (one app, no microservices) stands.
+Status: accepted, 24 November 2026. Replaces the package structure of ADR-0001; the rest of ADR-0001 (one app, no microservices) stands. Services are changed by ADR-0019.
 
 ## Context
 
