@@ -70,6 +70,9 @@ public class SampleEndpoints {
 				if (request.getRequestURI().equals("/api/sample/broken-filter")) {
 					throw new IllegalStateException("select secret from table");
 				}
+				if (request.getRequestURI().equals("/api/sample/database-in-filter")) {
+					throw new DataAccessResourceFailureException("10.0.0.5 refused");
+				}
 				chain.doFilter(request, response);
 			}
 		};

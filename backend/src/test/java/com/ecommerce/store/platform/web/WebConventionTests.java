@@ -103,7 +103,8 @@ class WebConventionTests {
 
 	@ParameterizedTest
 	@CsvSource({ "/api/sample/limit?limit=101,400", "/api/sample/limit?limit=x,400", "/api/sample/limit,400",
-			"/api/sample/nothing,404", "/api/sample/input,405", "/api/sample/broken-filter,500" })
+			"/api/sample/nothing,404", "/api/sample/input,405", "/api/sample/broken-filter,500",
+			"/api/sample/database-in-filter,503" })
 	void springsOwnRefusalsHaveTheSameShape(String path, int status) {
 		String body = get(path, status);
 		JsonNode error = JSON.readTree(body);

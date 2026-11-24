@@ -1,5 +1,6 @@
-package com.ecommerce.store.platform.web;
+package com.ecommerce.store.platform.security;
 
+import com.ecommerce.store.platform.web.ErrorWriter;
 import jakarta.servlet.DispatcherType;
 import org.springframework.boot.security.autoconfigure.actuate.web.servlet.EndpointRequest;
 import org.springframework.context.annotation.Bean;
@@ -9,11 +10,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 
 /**
- * Closed until the access policy exists (sprint 2). No sessions, no cookies and no sign-in pages:
- * the caller is the storefront's server with a bearer token, so there is nothing for CSRF to abuse.
+ * No sessions, no cookies and no sign-in pages: the caller is the storefront's server with a bearer
+ * token, so there is nothing for CSRF to abuse.
  */
 @Configuration(proxyBeanMethods = false)
 class SecurityConfiguration {
@@ -30,7 +32,9 @@ class SecurityConfiguration {
 	}
 
 	@Bean
-	SecurityFilterChain api(HttpSecurity http, ErrorWriter errors) throws Exception {
+	SecurityFilterChain everything(HttpSecurity http, ErrorWriter errors, TokenAuthentication tokens) throws Exception {
+		AuthenticationEntryPoint notSignedIn = (request, response, ex) -> errors.write(request, response,
+				tokens.namesAnotherStore(request) ? HttpStatus.FORBIDDEN : HttpStatus.UNAUTHORIZED);
 		return http.csrf(AbstractHttpConfigurer::disable)
 			.formLogin(AbstractHttpConfigurer::disable)
 			.httpBasic(AbstractHttpConfigurer::disable)
@@ -41,9 +45,10 @@ class SecurityConfiguration {
 				.permitAll()
 				.anyRequest()
 				.denyAll())
-			.exceptionHandling(handling -> handling
-				.authenticationEntryPoint(
-						(request, response, ex) -> errors.write(request, response, HttpStatus.UNAUTHORIZED))
+			// a bad token is 401 on public paths too: the storefront refreshes on that answer
+			.oauth2ResourceServer(server -> server.authenticationEntryPoint(notSignedIn)
+				.jwt(jwt -> jwt.jwtAuthenticationConverter(tokens)))
+			.exceptionHandling(handling -> handling.authenticationEntryPoint(notSignedIn)
 				.accessDeniedHandler((request, response, ex) -> errors.write(request, response, HttpStatus.FORBIDDEN)))
 			.build();
 	}

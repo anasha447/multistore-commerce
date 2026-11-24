@@ -17,6 +17,9 @@ interface UserRepository extends JpaRepository<User, Long> {
 	@Query("select u from User u left join fetch u.roles where u.id = :id")
 	Optional<User> findWithRoles(long id);
 
+	@Query("select u.enabled from User u where u.id = :id")
+	Optional<Boolean> isEnabled(long id);
+
 	@Query("select count(u) > 0 from User u where lower(u.email) = :email")
 	boolean emailTaken(String email);
 

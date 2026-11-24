@@ -16,7 +16,7 @@ public class ProductionChecks implements EnvironmentPostProcessor, Ordered {
 
 	private static final List<String> REQUIRED = List.of("STORE_ID", "STORE_NAME", "STORE_PUBLIC_URL", "DB_URL",
 			"DB_APP_USER", "DB_APP_PASSWORD", "DB_OWNER_USER", "DB_OWNER_PASSWORD", "REDIS_HOST", "REDIS_USER",
-			"REDIS_PASSWORD");
+			"REDIS_PASSWORD", "JWT_ISSUER", "JWT_PRIVATE_KEY", "JWT_PUBLIC_KEYS");
 
 	private static final int SHORTEST_PASSWORD = 16;
 

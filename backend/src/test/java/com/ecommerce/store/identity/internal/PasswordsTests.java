@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
+import java.util.UUID;
+
 import com.ecommerce.store.platform.ApiError;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -50,7 +52,7 @@ class PasswordsTests {
 
 	@Test
 	void otherPasswordsAreAccepted() {
-		assertThatCode(() -> passwords.requireUncommon("masala-mate-2026!")).doesNotThrowAnyException();
+		assertThatCode(() -> passwords.requireUncommon(UUID.randomUUID().toString())).doesNotThrowAnyException();
 	}
 
 }

@@ -87,16 +87,16 @@ class UserTests {
 	void theFirstAdminMustChangeThePasswordAndIsCreatedOnce() {
 		transaction.executeWithoutResult(status -> {
 			status.setRollbackOnly();
-			users.findAll().stream().filter(user -> user.getRoles().contains(Role.ADMIN)).forEach(user -> user.getRoles().remove(Role.ADMIN));
+			users.findAll().forEach(user -> user.getRoles().remove(Role.ADMIN));
 			users.flush();
 			String email = unique();
-			admin(email, "masala-mate-2026!").run(null);
+			admin(email, UUID.randomUUID().toString()).run(null);
 			User admin = users.findByEmail(email).orElseThrow();
 			assertThat(admin.getRoles()).containsExactlyInAnyOrder(Role.ADMIN, Role.MANAGER);
 			assertThat(admin.isMustChangePassword()).isTrue();
 
 			String second = unique();
-			admin(second, "masala-mate-2026!").run(null);
+			admin(second, UUID.randomUUID().toString()).run(null);
 			assertThat(users.findByEmail(second)).isEmpty();
 		});
 	}

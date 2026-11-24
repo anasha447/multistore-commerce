@@ -14,7 +14,8 @@ import org.springframework.mock.env.MockEnvironment;
 class ProductionChecksTests {
 
 	private static final String[] NAMES = { "STORE_ID", "STORE_NAME", "STORE_PUBLIC_URL", "DB_URL", "DB_APP_USER",
-			"DB_APP_PASSWORD", "DB_OWNER_USER", "DB_OWNER_PASSWORD", "REDIS_HOST", "REDIS_USER", "REDIS_PASSWORD" };
+			"DB_APP_PASSWORD", "DB_OWNER_USER", "DB_OWNER_PASSWORD", "REDIS_HOST", "REDIS_USER", "REDIS_PASSWORD",
+			"JWT_ISSUER", "JWT_PRIVATE_KEY", "JWT_PUBLIC_KEYS" };
 
 	@Test
 	void completeSettingsStart() {
@@ -28,7 +29,8 @@ class ProductionChecksTests {
 
 	@ParameterizedTest
 	@ValueSource(strings = { "STORE_ID", "STORE_NAME", "STORE_PUBLIC_URL", "DB_URL", "DB_APP_USER", "DB_APP_PASSWORD",
-			"DB_OWNER_USER", "DB_OWNER_PASSWORD", "REDIS_HOST", "REDIS_USER", "REDIS_PASSWORD" })
+			"DB_OWNER_USER", "DB_OWNER_PASSWORD", "REDIS_HOST", "REDIS_USER", "REDIS_PASSWORD", "JWT_ISSUER",
+			"JWT_PRIVATE_KEY", "JWT_PUBLIC_KEYS" })
 	void aBlankSettingStopsTheApp(String name) {
 		refused(complete().withProperty(name, "  "), name + " is missing");
 	}
