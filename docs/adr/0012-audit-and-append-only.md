@@ -12,4 +12,4 @@ Managers can change prices, stock and orders, and nothing recorded it.
 
 ## Consequences
 
-Two database roles per store.
+Two database roles per store. Services call `AuditService.record` in their own transaction; a test fails when a staff write is added without a test of its entry.

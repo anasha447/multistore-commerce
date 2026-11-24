@@ -1,5 +1,7 @@
 package com.ecommerce.store.service;
 
+import java.util.function.Consumer;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -31,7 +33,7 @@ public class UserService {
 	private final TransactionTemplate transaction;
 
 	/** Hashing is slow on purpose and happens outside any transaction. */
-	public User create(User user, String password, String taken) {
+	public User create(User user, String password, String taken, Consumer<User> inSameTransaction) {
 		passwordPolicy.requireUncommon(password);
 		user.setEmail(User.normaliseEmail(user.getEmail()));
 		if (users.existsByEmail(user.getEmail())) {
@@ -39,7 +41,11 @@ public class UserService {
 		}
 		user.setPasswordHash(passwordEncoder.encode(password));
 		try {
-			return users.save(user);
+			return transaction.execute(status -> {
+				User saved = users.saveAndFlush(user);
+				inSameTransaction.accept(saved);
+				return saved;
+			});
 		}
 		catch (DataIntegrityViolationException ex) {
 			throw users.existsByEmail(user.getEmail()) ? ApiException.conflict(taken) : ex;

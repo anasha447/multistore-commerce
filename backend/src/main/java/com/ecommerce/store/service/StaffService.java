@@ -28,6 +28,8 @@ public class StaffService {
 
 	private final UserService userService;
 
+	private final AuditService audit;
+
 	public AdminUserResponse create(CreateStaffRequest request) {
 		User user = User.builder()
 			.email(request.email())
@@ -37,8 +39,9 @@ public class StaffService {
 			.roles(Set.of(Role.MANAGER))
 			.mustChangePassword(true)
 			.build();
-		return AdminUserResponse
-			.from(userService.create(user, request.password(), "An account with this email already exists."));
+		return AdminUserResponse.from(userService.create(user, request.password(),
+				"An account with this email already exists.", created -> audit.record("STAFF_CREATED", "user",
+						created.getId(), null, AdminUserResponse.from(created))));
 	}
 
 	@Transactional(readOnly = true)
@@ -59,11 +62,14 @@ public class StaffService {
 			throw ApiException.conflict("You cannot change the status of your own account");
 		}
 		User user = users.findAndLock(id).orElseThrow(StaffService::notFound);
+		AdminUserResponse before = AdminUserResponse.from(user);
 		user.setEnabled(enabled);
 		if (!enabled) {
 			refreshTokens.revokeAll(id);
 		}
-		return AdminUserResponse.from(user);
+		AdminUserResponse after = AdminUserResponse.from(user);
+		audit.record(enabled ? "ACCOUNT_ENABLED" : "ACCOUNT_DISABLED", "user", id, before, after);
+		return after;
 	}
 
 	private static ApiException notFound() {
