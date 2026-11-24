@@ -17,7 +17,7 @@ import org.springframework.test.context.ContextConfiguration;
 @Inherited
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT, properties = "store.rate-limits=false")
 @ContextConfiguration(initializers = Containers.class)
-@Import({ TestClock.Configuration.class, Api.Configuration.class, People.Configuration.class })
+@Import({ TestClock.Configuration.class, Api.Configuration.class, People.Configuration.class, SqlCounter.Configuration.class })
 public @interface IntegrationTest {
 
 }
