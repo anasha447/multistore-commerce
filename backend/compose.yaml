@@ -6,15 +6,18 @@ services:
   postgres:
     image: postgres:17-alpine
     environment:
-      POSTGRES_DB: matessa
-      POSTGRES_USER: ${DB_USER:?run scripts/setup-local.mjs first}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:?run scripts/setup-local.mjs first}
+      POSTGRES_PASSWORD: ${DB_SUPERUSER_PASSWORD:?run scripts/setup-local.mjs first}
+      STORES: matessa
+      MATESSA_OWNER_PASSWORD: ${DB_OWNER_PASSWORD:?run scripts/setup-local.mjs first}
+      MATESSA_APP_PASSWORD: ${DB_APP_PASSWORD:?run scripts/setup-local.mjs first}
+      MATESSA_BACKUP_PASSWORD: ${DB_BACKUP_PASSWORD:?run scripts/setup-local.mjs first}
     ports:
       - "127.0.0.1:${DB_PORT:-5434}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - ../deploy/postgres/init.sh:/docker-entrypoint-initdb.d/10-stores.sh:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d matessa"]
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U postgres -d postgres"]
       interval: 5s
       timeout: 3s
       retries: 10
