@@ -31,3 +31,12 @@ target/
 node_modules/
 .next/
 *.log
+
+# storefront files that are not part of the site
+frontend/animation.hero.md
+frontend/public/packaging details/
+frontend/public/file.svg
+frontend/public/globe.svg
+frontend/public/next.svg
+frontend/public/vercel.svg
+frontend/public/window.svg
