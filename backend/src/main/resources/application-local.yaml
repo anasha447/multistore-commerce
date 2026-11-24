@@ -1,0 +1,19 @@
+spring:
+  config:
+    import: "file:.env[.properties]"
+  datasource:
+    url: jdbc:postgresql://localhost:${DB_PORT}/matessa
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+    hikari:
+      maximum-pool-size: 5
+  data:
+    redis:
+      host: localhost
+      port: ${REDIS_PORT}
+      password: ${REDIS_PASSWORD}
+
+server:
+  # where the storefront looks in development
+  port: 9080
+  address: localhost

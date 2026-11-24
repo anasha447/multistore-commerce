@@ -11,5 +11,21 @@ Backend of a small e-commerce platform and the Matessa storefront it serves.
 
 Postgres 17 holds the truth, Redis answers repeated reads and rate limits, images live in Cloudflare R2.
 
+## Run it locally
+
+Needs JDK 21, Node 22 or newer and Docker.
+
+```bash
+node scripts/setup-local.mjs                     # once: writes local settings with random passwords
+cd backend
+docker compose up -d --wait                      # Postgres on 5434, Redis on 6381, this machine only
+./mvnw spring-boot:run -Dspring-boot.run.profiles=local   # the app on port 9080
+cd ../frontend && npm ci && npm run dev          # the storefront on port 3100
+```
+
+`./mvnw verify` in `backend/` runs every test; it starts its own containers.
+
+## Work
+
 Work is tracked in [milestones](https://github.com/anasha447/multistore-commerce/milestones), one per sprint.
 The documents on security, Cloudflare and deployment are kept off this repository; links to them do not resolve here.
