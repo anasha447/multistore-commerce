@@ -1,6 +1,6 @@
 package com.ecommerce.fixtures;
 
-import com.ecommerce.store.platform.PublicEntity;
+import com.ecommerce.store.model.BaseEntity;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 @Table(name = "sample_things")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class SampleThing extends PublicEntity {
+public class SampleThing extends BaseEntity {
 
 	private String name;
 

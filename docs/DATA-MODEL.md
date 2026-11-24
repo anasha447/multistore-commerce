@@ -1,8 +1,8 @@
 # Data model
 
 One Postgres 17 database per store, schema `shop`. Starts empty: no migration of old data (owner's decision).
-Foreign keys are used inside the database, also between modules, because it is one database. A module still only
-**reads and writes its own tables** in code.
+Foreign keys are used inside the database, also between features, because it is one database. In code a table still belongs to
+**one service**; others ask that service.
 
 **Ids.** Every table whose id appears in an answer has a random 16-digit `bigint` id, assigned by the app before the insert, with a `check` that it is at least 1,000,000,000,000,000. Tables that never leave the app (ledger, audit, mail log) use identity columns. Lists are ordered by `created_at` or their own order column, never by id.
 

@@ -8,7 +8,7 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.ecommerce.store.platform.PublicId;
+import com.ecommerce.store.model.BaseEntity;
 import tools.jackson.databind.JsonNode;
 
 /** Compares an answer with the documented response type: every field, in order, with its JSON type. */
@@ -78,7 +78,7 @@ public final class Shape {
 			check(value, field.type(), where + "." + field.name());
 			boolean id = field.name().equals("id") || field.name().endsWith("Id");
 			if (id && field.type().equals("Long") && !value.isNull()) {
-				assertThat(value.asLong()).as(where + "." + field.name()).isBetween(PublicId.MIN, PublicId.MAX);
+				assertThat(value.asLong()).as(where + "." + field.name()).isBetween(BaseEntity.MIN_ID, BaseEntity.MAX_ID);
 			}
 		}
 	}

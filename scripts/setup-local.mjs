@@ -49,9 +49,8 @@ settings("backend/.env", {
   REDIS_HOST: () => "localhost",
   REDIS_PORT: () => "6381",
   REDIS_PASSWORD: secret,
-  JWT_ISSUER: () => "matessa",
   JWT_PRIVATE_KEY: () => "file:keys/jwt-private.pem",
-  JWT_PUBLIC_KEYS: () => "file:keys/jwt-public.pem",
+  JWT_PUBLIC_KEY: () => "file:keys/jwt-public.pem",
   ADMIN_EMAIL: () => "admin@matessa.test",
   ADMIN_PASSWORD: secret,
 });
