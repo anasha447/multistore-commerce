@@ -69,7 +69,8 @@ class ProductionCheckTests {
 			.withProperty("DB_OWNER_USER", "owner")
 			.withProperty("DB_APP_PASSWORD", "x".repeat(16))
 			.withProperty("DB_OWNER_PASSWORD", "y".repeat(16))
-			.withProperty("REDIS_PASSWORD", "z".repeat(16));
+			.withProperty("REDIS_PASSWORD", "z".repeat(16))
+			.withProperty("TRUSTED_CALLER", "matessa-web");
 	}
 
 }

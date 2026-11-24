@@ -9,5 +9,5 @@ import org.springframework.validation.annotation.Validated;
 @Validated
 @ConfigurationProperties("store")
 public record StoreProperties(@NotNull @Pattern(regexp = "[a-z][a-z0-9_]{1,30}") String id, String adminEmail,
-		String adminPassword) {
+		String adminPassword, String trustedCaller) {
 }

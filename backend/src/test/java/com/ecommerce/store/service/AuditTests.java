@@ -65,7 +65,7 @@ class AuditTests {
 		Map<String, Object> entry = only("STAFF_CREATED", answer.json().get("id").asLong());
 		assertThat(entry).containsEntry("actor_id", admin.id()).containsEntry("entity", "user").containsEntry("before", null);
 		assertThat(entry.get("actor_roles").toString()).contains("ADMIN");
-		assertThat(entry.get("client_ip")).isNotNull();
+		assertThat(entry.get("client_ip").toString()).startsWith("10.");
 		assertThat(entry.get("request_id")).isEqualTo(answer.headers().firstValue("X-Request-Id").orElseThrow());
 		assertThat(entry.get("after").toString()).contains("\"lastName\"").doesNotContain(password).doesNotContainIgnoringCase("hash");
 	}

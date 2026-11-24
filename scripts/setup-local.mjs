@@ -37,6 +37,7 @@ function keys(folder) {
 
 settings("backend/.env", {
   STORE_ID: () => "matessa",
+  TRUSTED_CALLER: () => "localhost",
   DB_PORT: () => "5434",
   DB_URL: () => "jdbc:postgresql://localhost:5434/matessa?currentSchema=shop",
   DB_APP_USER: () => "matessa_app",
