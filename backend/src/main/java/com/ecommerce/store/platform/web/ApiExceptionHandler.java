@@ -1,5 +1,6 @@
 package com.ecommerce.store.platform.web;
 
+import java.sql.SQLException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -7,6 +8,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.NestedExceptionUtils;
 import org.springframework.dao.ConcurrencyFailureException;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -60,6 +62,9 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 
 	@ExceptionHandler({ ConcurrencyFailureException.class, DataIntegrityViolationException.class })
 	ResponseEntity<Object> conflict(Exception ex, HttpServletRequest request) {
+		if (valueDoesNotFit(ex)) {
+			return plain(HttpStatus.BAD_REQUEST, ErrorTexts.message(HttpStatus.BAD_REQUEST), request);
+		}
 		log.warn("Conflict on {} {}: {}", request.getMethod(), request.getRequestURI(), ex.getClass().getSimpleName());
 		return plain(HttpStatus.CONFLICT, ErrorTexts.message(HttpStatus.CONFLICT), request);
 	}
@@ -117,6 +122,12 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 			HttpStatusCode status, WebRequest request) {
 		ErrorResponse error = ErrorResponse.of(status, ErrorTexts.message(status), path(request));
 		return ResponseEntity.status(status).headers(headers).contentType(MediaType.APPLICATION_JSON).body(error);
+	}
+
+	/** SQLSTATE class 22: too long for its column, or characters Postgres cannot store. */
+	private static boolean valueDoesNotFit(Throwable ex) {
+		return NestedExceptionUtils.getMostSpecificCause(ex) instanceof SQLException sql && sql.getSQLState() != null
+				&& sql.getSQLState().startsWith("22");
 	}
 
 	private static ResponseEntity<Object> invalid(Map<String, String> fields, String path) {
