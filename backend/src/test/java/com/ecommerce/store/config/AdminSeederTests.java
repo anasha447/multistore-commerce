@@ -61,7 +61,7 @@ class AdminSeederTests {
 	private AdminSeeder seeder(String email, String password) {
 		MockEnvironment production = new MockEnvironment();
 		production.setActiveProfiles("prod");
-		return new AdminSeeder(users, encoder, policy, new StoreProperties("matessa", email, password, "", true, 100), production);
+		return new AdminSeeder(users, encoder, policy, new StoreProperties("matessa", email, password, "", true, 100, 1), production);
 	}
 
 }

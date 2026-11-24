@@ -84,7 +84,9 @@ public class RateLimiter {
 			return false;
 		}
 		// counted here as well: a hiccup of Redis, or an entry it drops, must not start the count again
-		return allowedLocally(name, rule.getLimit(), window, cost);
+		// the copies cannot add up what they counted while Redis is gone, so each allows its share
+		int limit = answer.isPresent() ? rule.getLimit() : Math.max(1, rule.getLimit() / store.copies());
+		return allowedLocally(name, limit, window, cost);
 	}
 
 	private synchronized boolean allowedLocally(String name, int limit, long window, int cost) {

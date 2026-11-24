@@ -3,6 +3,8 @@ store:
   admin-email: ${ADMIN_EMAIL:}
   admin-password: ${ADMIN_PASSWORD:}
   trusted-caller: ${TRUSTED_CALLER:}
+  # running copies of this store's app
+  copies: ${STORE_COPIES:1}
 
 spring:
   application:

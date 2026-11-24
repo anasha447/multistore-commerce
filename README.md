@@ -24,7 +24,8 @@ cd ../frontend && npm ci && npm run dev          # the storefront on port 3100
 ```
 
 `./mvnw verify` in `backend/` runs every test; it starts its own containers. With app and storefront running,
-`node scripts/smoke/sign-in.mjs` checks sign-in through the storefront. The first admin is in `backend/.env`.
+`node scripts/smoke/sign-in.mjs` checks sign-in through the storefront; `limits.mjs` checks limits by visitor address
+(storefront started with `TRUST_PROXY_IP_HEADER=true`). The first admin is in `backend/.env`.
 
 ## Work
 

@@ -1,0 +1,47 @@
+name: nightly
+
+# Tests that depend on timing, many times over, with every Redis failure in the log.
+on:
+  schedule:
+    - cron: "30 20 * * *" # 02:00 in India
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  repeat:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      - name: Ten times, in both orders
+        env:
+          LOGGING_LEVEL_COM_ECOMMERCE_STORE_CONFIG: DEBUG
+        run: |
+          failed=0
+          for i in $(seq 1 10); do
+            order=$([ $((i % 2)) = 0 ] && echo alphabetical || echo reversealphabetical)
+            if ./mvnw -B -ntp test -Dsurefire.runOrder=$order \
+                -Dtest='RateLimit*Tests,CacheTests,DeniedAccountsTests,LoginTests,RefreshTests,DatabaseRaceTests,WithoutRedisTests' > run-$i.log 2>&1; then
+              echo "run $i ($order): ok"
+            else
+              failed=$((failed + 1))
+              echo "::error::run $i ($order) failed"
+              grep -E '^\[ERROR\]  |Expecting|but was|expected:' run-$i.log | head -30
+              echo "--- Redis"
+              grep -E 'Redis did not answer|Redis: State' run-$i.log | tail -20
+            fi
+          done
+          echo "$failed of 10 failed"
+          [ "$failed" = 0 ]
