@@ -6,17 +6,14 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 
-import com.ecommerce.store.TestcontainersConfiguration;
+import com.ecommerce.store.IntegrationTest;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
 /** The app serves nothing outside the contract. */
-@Import(TestcontainersConfiguration.class)
-@SpringBootTest
+@IntegrationTest
 class EndpointMappingTests {
 
 	@Autowired
