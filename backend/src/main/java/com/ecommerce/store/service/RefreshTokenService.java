@@ -46,6 +46,8 @@ public class RefreshTokenService {
 
 	private final JwtService jwt;
 
+	private final AuditService audit;
+
 	private final Clock clock;
 
 	/** A new sign-in, unless the account was locked, disabled or given a new password meanwhile. */
@@ -54,6 +56,7 @@ public class RefreshTokenService {
 		if (users.clearFailures(user.getId(), user.getPasswordHash(), clock.instant()) == 0) {
 			throw AuthService.refused();
 		}
+		audit.recordSignIn(user);
 		return issue(user, UUID.randomUUID().toString());
 	}
 

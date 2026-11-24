@@ -38,6 +38,8 @@ public class AuthService {
 
 	private final RefreshTokenService refreshTokens;
 
+	private final AuditService audit;
+
 	private final Clock clock;
 
 	public UserResponse register(RegisterRequest request) {
@@ -49,7 +51,8 @@ public class AuthService {
 			.roles(Set.of(Role.CUSTOMER))
 			.build();
 		return UserResponse.from(userService.create(user, request.password(),
-				"An account with this email already exists. Sign in instead."));
+				"An account with this email already exists. Sign in instead.", created -> {
+				}));
 	}
 
 	/** Every way to fail looks the same and takes as long. */
@@ -61,9 +64,11 @@ public class AuthService {
 		catch (BadCredentialsException ex) {
 			Instant now = clock.instant();
 			users.countFailure(User.normaliseEmail(request.email()), ALLOWED_FAILURES, now.plus(LOCK), now);
+			audit.recordFailedSignIn(request.email());
 			throw refused();
 		}
-		catch (AccountStatusException ex) {
+		catch (AccountStatusException | ApiException ex) {
+			audit.recordFailedSignIn(request.email());
 			throw refused();
 		}
 	}
