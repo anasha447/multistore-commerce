@@ -41,6 +41,15 @@ class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 	}
 
 	@ExceptionHandler
+	ResponseEntity<Object> handle(RateLimitException ex, WebRequest request) {
+		ResponseEntity<Object> answer = answer(ex.getStatus(), ex.getMessage(), null, null, request);
+		return ResponseEntity.status(answer.getStatusCode())
+			.headers(answer.getHeaders())
+			.header(HttpHeaders.RETRY_AFTER, Long.toString(ex.getRetryAfterSeconds()))
+			.body(answer.getBody());
+	}
+
+	@ExceptionHandler
 	ResponseEntity<Object> handle(AuthenticationException ex, WebRequest request) {
 		return answer(HttpStatus.UNAUTHORIZED, request);
 	}

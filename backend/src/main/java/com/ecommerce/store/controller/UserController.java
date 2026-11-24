@@ -13,7 +13,9 @@ import org.springframework.web.bind.annotation.RestController;
 import com.ecommerce.store.dto.request.ChangePasswordRequest;
 import com.ecommerce.store.dto.request.UpdateProfileRequest;
 import com.ecommerce.store.dto.response.UserResponse;
+import com.ecommerce.store.model.enums.RateLimitRule;
 import com.ecommerce.store.security.CurrentUserId;
+import com.ecommerce.store.security.RateLimited;
 import com.ecommerce.store.service.UserService;
 
 @RestController
@@ -34,6 +36,7 @@ class UserController {
 	}
 
 	@PutMapping("/password")
+	@RateLimited(RateLimitRule.PASSWORD)
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	void changePassword(@CurrentUserId Long userId, @Valid @RequestBody ChangePasswordRequest request) {
 		userService.changePassword(userId, request);

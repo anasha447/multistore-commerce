@@ -142,8 +142,8 @@ repository root
    `/media/*` to the app and everything else to the storefront.
 3. The storefront's BFF checks its allow-list, adds the token from the httpOnly cookie, `X-Tenant-ID` and
    the client address, and calls `http://<store>-app:8080`.
-4. App filters, in order: request id → store check (400) → rate limit (429) → JWT (401; 403 for another
-   store's token) → access policy (401 or 403).
+4. App, in order: request id → store check (400) → whole-store limit (503) → JWT (401; 403 for another
+   store's token) → access policy (401 or 403) → rate limits (429).
 5. Controller: validates the DTO, calls one service method, returns a DTO. No logic.
 6. Service: short transaction, or a cache answer.
 7. After commit: cache entries cleared, events delivered in the background.
