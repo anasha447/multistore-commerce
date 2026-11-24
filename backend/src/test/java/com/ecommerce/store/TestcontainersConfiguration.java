@@ -7,17 +7,17 @@ import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
 @TestConfiguration(proxyBeanMethods = false)
-class TestcontainersConfiguration {
+public class TestcontainersConfiguration {
 
 	@Bean
 	@ServiceConnection
-	PostgreSQLContainer postgres() {
+	public PostgreSQLContainer postgres() {
 		return new PostgreSQLContainer("postgres:17-alpine");
 	}
 
 	@Bean
 	@ServiceConnection(name = "redis")
-	GenericContainer<?> redis() {
+	public GenericContainer<?> redis() {
 		return new GenericContainer<>("redis:7-alpine").withExposedPorts(6379);
 	}
 

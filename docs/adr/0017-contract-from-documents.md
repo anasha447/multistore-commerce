@@ -8,7 +8,7 @@ The first plan was to run the old five-process system and record its answers as 
 
 ## Decision
 
-`API-CONTRACT.md`, `CONTRACT-DTOS.md` and the storefront's types are the reference. They are turned into test resources, and the app is tested against them.
+`API-CONTRACT.md`, `CONTRACT-DTOS.md` and the storefront's types are the reference. The tests read them directly, so there is one copy.
 
 ## Consequences
 

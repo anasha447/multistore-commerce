@@ -10,7 +10,7 @@ so most of them move with small changes.
 | Rules | JUnit, AssertJ, no Spring | pricing, coupons, order states, SKU and order numbers |
 | Module | `@ApplicationModuleTest`, Testcontainers Postgres | one module through its interface |
 | HTTP | `@SpringBootTest(RANDOM_PORT)`, `RestTestClient`, Testcontainers Postgres and Redis | filters, JSON, status codes |
-| Contract | `contract/*.json` | paths, status codes, JSON fields and types as documented |
+| Contract | the contract documents, read by the tests | paths, status codes, JSON fields and types as documented |
 | Structure | `ApplicationModules.verify()` | no forbidden dependency, no cycle |
 | Storefront smoke | both storefront images + app in Compose | nothing in the frontend broke |
 | Load | k6 from another machine | memory, response times, cache hit rate |
@@ -21,10 +21,9 @@ No H2, no mocked repositories. Mail, R2 and later Razorpay use fakes at their se
 
 Nothing is recorded from the old system (ADR-0017). The documents and the storefront's own types are the reference.
 
-1. `src/test/resources/contract/endpoints.json` lists all 91 endpoints: method, path, access, response type, success status, limit.
-   `dtos.json` lists every request and response field in order, with its type and validation. Both are generated from
-   `API-CONTRACT.md` and `CONTRACT-DTOS.md`; a test fails when they drift apart.
-2. Every path the storefront calls must be in `endpoints.json`.
+1. The tests read `API-CONTRACT.md` and `CONTRACT-DTOS.md` directly, so there is one copy of the contract. The two documents
+   must list the same 91 endpoints and define every type they use.
+2. Every path the storefront calls and every field its types declare must be in the documents.
 3. Each endpoint gets HTTP tests for a success and every documented failure, checking status, every field name, JSON type,
    null or missing, enum text, error `message` and `code`, and page shape.
 4. An endpoint that exists in the app but not in the list, or the other way round once its milestone is done, fails the build.
