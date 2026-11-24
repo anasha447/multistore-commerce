@@ -20,6 +20,7 @@ class ProductionCheck {
 				"DB_APP_USER and DB_OWNER_USER must differ");
 		Assert.hasText(environment.getProperty("TRUSTED_CALLER"), "TRUSTED_CALLER must name the storefront");
 		Assert.state(environment.getProperty("store.rate-limits", Boolean.class, true), "Rate limits must be on");
+		Assert.state(environment.getProperty("store.jobs", Boolean.class, true), "Jobs must be on");
 		Assert.state(environment.matchesProfiles("!local & !demo"), "prod cannot be combined with local or demo");
 	}
 

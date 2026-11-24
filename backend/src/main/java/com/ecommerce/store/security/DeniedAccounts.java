@@ -1,7 +1,9 @@
 package com.ecommerce.store.security;
 
+import java.time.Clock;
 import java.time.Duration;
 import java.util.Optional;
+import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -11,8 +13,13 @@ import org.springframework.stereotype.Component;
 
 import com.ecommerce.store.config.RedisGuard;
 import com.ecommerce.store.config.StoreProperties;
+import com.ecommerce.store.repository.UserRepository;
 
-/** Disabled accounts, for as long as an access token of theirs can still be valid. */
+/**
+ * Shoppers disabled a moment ago, for as long as an access token of theirs can still be valid. Kept in
+ * Redis, where every copy of the app sees it at once, and read from Postgres every few seconds, because
+ * Redis may lose it. Being listed is a suspicion only: Postgres decides, see ActiveAccountValidator.
+ */
 @Component
 @RequiredArgsConstructor
 public class DeniedAccounts {
@@ -20,8 +27,9 @@ public class DeniedAccounts {
 	/** A token's lifetime and the minute Spring allows for clocks that disagree. */
 	private static final Duration LONG_ENOUGH = JwtService.LIFETIME.plusMinutes(2);
 
-	/** Redis may lose an entry; this copy of the app does not. */
-	private final Cache<Long, Boolean> here = Caffeine.newBuilder().expireAfterWrite(LONG_ENOUGH).build();
+	private final Cache<Long, Boolean> disabledHere = Caffeine.newBuilder().expireAfterWrite(LONG_ENOUGH).build();
+
+	private final UserRepository users;
 
 	private final StringRedisTemplate redis;
 
@@ -29,8 +37,12 @@ public class DeniedAccounts {
 
 	private final StoreProperties store;
 
+	private final Clock clock;
+
+	private volatile Set<Long> disabledAnywhere = Set.of();
+
 	public void deny(Long userId) {
-		here.put(userId, true);
+		disabledHere.put(userId, true);
 		guard.ask(() -> {
 			redis.opsForValue().set(key(userId), "1", LONG_ENOUGH);
 			return true;
@@ -38,13 +50,20 @@ public class DeniedAccounts {
 	}
 
 	public void allow(Long userId) {
-		here.invalidate(userId);
+		disabledHere.invalidate(userId);
 		guard.ask(() -> redis.delete(key(userId)));
 	}
 
+	public void readFromDatabase() {
+		disabledAnywhere = Set.copyOf(users.findDisabledSince(clock.instant().minus(LONG_ENOUGH)));
+	}
+
 	/** Empty when Redis did not say. */
-	Optional<Boolean> isDenied(Long userId) {
-		return (here.getIfPresent(userId) != null) ? Optional.of(true) : guard.ask(() -> redis.hasKey(key(userId)));
+	Optional<Boolean> isSuspect(Long userId) {
+		if (disabledHere.getIfPresent(userId) != null || disabledAnywhere.contains(userId)) {
+			return Optional.of(true);
+		}
+		return guard.ask(() -> redis.hasKey(key(userId)));
 	}
 
 	private String key(Long userId) {

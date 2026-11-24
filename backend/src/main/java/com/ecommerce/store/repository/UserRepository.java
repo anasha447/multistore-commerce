@@ -1,6 +1,7 @@
 package com.ecommerce.store.repository;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 
 import jakarta.persistence.LockModeType;
@@ -36,6 +37,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
 	Page<User> search(Role role, Boolean enabled, Pageable pageable);
 
 	boolean existsByIdAndEnabledTrue(Long id);
+
+	@Query("select u.id from User u where u.enabled = false and u.updatedAt > :since")
+	List<Long> findDisabledSince(Instant since);
 
 	/** Everything that ends or continues sign-ins starts with this. */
 	@Lock(LockModeType.PESSIMISTIC_WRITE)

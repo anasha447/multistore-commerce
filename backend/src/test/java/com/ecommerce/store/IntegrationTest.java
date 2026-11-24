@@ -11,11 +11,11 @@ import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ContextConfiguration;
 
-/** The whole app on a random port against real Postgres and Redis. Rate limits have their own tests. */
+/** The whole app on a random port against real Postgres and Redis. Rate limits and jobs have their own tests. */
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
-@SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT, properties = "store.rate-limits=false")
+@SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT, properties = { "store.rate-limits=false", "store.jobs=false" })
 @ContextConfiguration(initializers = Containers.class)
 @Import({ TestClock.Configuration.class, Api.Configuration.class, People.Configuration.class, SqlCounter.Configuration.class })
 public @interface IntegrationTest {

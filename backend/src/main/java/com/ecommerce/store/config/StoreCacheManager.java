@@ -1,6 +1,7 @@
 package com.ecommerce.store.config;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -13,6 +14,8 @@ import java.util.concurrent.FutureTask;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Supplier;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import lombok.SneakyThrows;
 import org.springframework.cache.support.NullValue;
 import org.springframework.data.redis.cache.RedisCache;
@@ -46,10 +49,15 @@ class StoreCacheManager extends RedisCacheManager {
 
 	private final Map<String, String> groups = new HashMap<>();
 
+	private final List<StoreCache> caches = new ArrayList<>();
+
+	/** Groups whose clear did not reach Redis. */
+	private final Map<String, Object> unclearedGroups = new ConcurrentHashMap<>();
+
 	StoreCacheManager(RedisConnectionFactory connections, StringRedisTemplate redis, RedisGuard guard, String store,
 			List<CacheSpec> specs) {
 		// by default Spring writes and clears in the background: a reader could still see what was just changed
-		super(RedisCacheWriter.create(connections, writer -> writer.immediateWrites()), RedisCacheConfiguration.defaultCacheConfig(),
+		super(RedisCacheWriter.create(connections, writer -> writer.immediateWrites().collectStatistics()), RedisCacheConfiguration.defaultCacheConfig(),
 				false, configurations(specs, store));
 		this.redis = redis;
 		this.guard = guard;
@@ -77,7 +85,27 @@ class StoreCacheManager extends RedisCacheManager {
 
 	@Override
 	protected RedisCache createRedisCache(String name, RedisCacheConfiguration configuration) {
-		return new StoreCache(name, getCacheWriter(), configuration, groups.get(name));
+		StoreCache cache = new StoreCache(name, getCacheWriter(), configuration, groups.get(name));
+		caches.add(cache);
+		return cache;
+	}
+
+	/** Repeats the clears that failed while Redis was gone. Until one works, what it should have cleared is not read. */
+	void repeatFailedClears() {
+		caches.forEach(StoreCache::repeatFailedEvicts);
+		unclearedGroups.forEach((group, mark) -> {
+			if (countUp(group)) {
+				unclearedGroups.remove(group, mark);
+			}
+		});
+	}
+
+	private boolean countUp(String group) {
+		return guard.ask(() -> redis.opsForValue().increment(generationKey(group))).isPresent();
+	}
+
+	private String generationKey(String group) {
+		return "s:" + store + ":gen:" + group;
 	}
 
 	private final class StoreCache extends RedisCache {
@@ -86,9 +114,14 @@ class StoreCacheManager extends RedisCacheManager {
 
 		private final Map<Object, FutureTask<Object>> loading = new ConcurrentHashMap<>();
 
+		/** Keys whose clear did not reach Redis; forgotten when the entry has expired anyway. */
+		private final Cache<Object, Object> uncleared;
+
 		private StoreCache(String name, RedisCacheWriter writer, RedisCacheConfiguration configuration, String group) {
 			super(name, writer, configuration);
 			this.group = group;
+			Duration longest = configuration.getTtlFunction().getTimeToLive("", "").multipliedBy(2);
+			this.uncleared = Caffeine.newBuilder().expireAfterWrite(longest).build();
 		}
 
 		/** Used by @Cacheable(sync = true). */
@@ -96,7 +129,7 @@ class StoreCacheManager extends RedisCacheManager {
 		@SuppressWarnings("unchecked")
 		public <T> T get(Object key, Callable<T> loader) {
 			Optional<String> generation = generation();
-			if (generation.isEmpty()) {
+			if (generation.isEmpty() || mayBeOld(key)) {
 				return call(loader);
 			}
 			Object entry = group == null ? key : generation.get() + ":" + key;
@@ -129,10 +162,29 @@ class StoreCacheManager extends RedisCacheManager {
 		@Override
 		public void evict(Object key) {
 			loading.remove(key);
-			ask(() -> {
+			if (!evicted(key)) {
+				uncleared.put(key, new Object());
+			}
+		}
+
+		private boolean evicted(Object key) {
+			return ask(() -> {
 				super.evict(key);
 				return true;
+			}).isPresent();
+		}
+
+		private void repeatFailedEvicts() {
+			uncleared.asMap().forEach((key, mark) -> {
+				if (evicted(key)) {
+					// unless it failed again meanwhile
+					uncleared.asMap().remove(key, mark);
+				}
 			});
+		}
+
+		private boolean mayBeOld(Object key) {
+			return uncleared.getIfPresent(key) != null || (group != null && unclearedGroups.containsKey(group));
 		}
 
 		@Override
@@ -141,17 +193,15 @@ class StoreCacheManager extends RedisCacheManager {
 				throw new UnsupportedOperationException(getName() + " belongs to no group; clear its keys");
 			}
 			loading.clear();
-			ask(() -> redis.opsForValue().increment(generationKey()));
+			if (!countUp(group)) {
+				unclearedGroups.put(group, new Object());
+			}
 		}
 
 		/** Empty when Redis did not say: then nothing cached may be used. */
 		private Optional<String> generation() {
 			return (group == null) ? Optional.of("")
-					: ask(() -> Objects.requireNonNullElse(redis.opsForValue().get(generationKey()), "0"));
-		}
-
-		private String generationKey() {
-			return "s:" + store + ":gen:" + group;
+					: ask(() -> Objects.requireNonNullElse(redis.opsForValue().get(generationKey(group)), "0"));
 		}
 
 		private <T> Optional<T> ask(Supplier<T> command) {

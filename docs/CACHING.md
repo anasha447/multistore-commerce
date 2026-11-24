@@ -72,8 +72,8 @@ are merged, so an expired hot key costs one query, not fifty. Lifetimes get ±10
 scanner cannot turn 404s into database load.
 
 **Write:** change Postgres, commit, then clear. Always after commit (`AfterCommit` helper), or a reader could store the
-old value again during the gap. If clearing fails because Redis is down, the entry lives at most its lifetime; that
-is why no lifetime for prices or stock is long.
+old value again during the gap. If clearing fails because Redis is down, the copy that tried repeats it every two seconds and does not read
+that entry or group until it worked. Other copies may read it until then, at most for its lifetime; that is why no lifetime for prices or stock is long.
 
 **The remaining race:** a reader that loaded the old row just before the commit can still store it just after the
 clear. Bounded by the lifetimes above, and harmless because checkout never reads the cache.
@@ -91,8 +91,9 @@ JSON of the response DTO, type-bound. Never entities, passwords, hashes, tokens,
 `me` and `addresses` contain personal data: Redis is not exposed, not persisted, and entries are short-lived.
 
 `me` is for display. Permission decisions use the JWT and whether the account is still enabled: staff are looked up in Postgres on every
-request, shoppers in the `deny` key (17 minutes, also kept in the memory of the copy that set it, because Redis may evict it) or in Postgres
-while Redis is gone. Disabling takes effect at once.
+request, shoppers when the `deny` key (17 minutes), the memory of the copy that set it, or the list of recently disabled accounts each copy reads
+from Postgres every five seconds names them, and while Redis is gone. Being named is a suspicion: Postgres decides. Disabling takes effect at once,
+and within five seconds in other copies if Redis lost the key.
 
 ## 6. The layers in front
 
@@ -106,5 +107,5 @@ while Redis is gone. Disabling takes effect at once.
 
 ## 7. Watch
 
-Hit rate per group, keys evicted, Redis memory, and Postgres statements per request. Alert if the catalog hit rate
+Hit rate per cache (`cache.gets` on the private port), keys evicted, Redis memory, and Postgres statements per request. Alert if the catalog hit rate
 drops below 90% for 15 minutes, which usually means something clears too often.
