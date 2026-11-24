@@ -4,14 +4,18 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 
 import com.ecommerce.fixtures.SampleEndpoints;
 import com.ecommerce.store.IntegrationTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
@@ -22,6 +26,7 @@ import tools.jackson.databind.json.JsonMapper;
 
 /** What every endpoint shares (API-CONTRACT.md, section 1). */
 @IntegrationTest
+@ExtendWith(OutputCaptureExtension.class)
 @Import(SampleEndpoints.class)
 class WebConventionTests {
 
@@ -144,9 +149,17 @@ class WebConventionTests {
 	}
 
 	@Test
+	void failuresAreLoggedWithTheRequestId(CapturedOutput output) {
+		for (String path : List.of("/api/sample/broken-filter", "/api/sample/fail/anything")) {
+			String id = requestId(path);
+			assertThat(output.getAll().lines()).as(path).anyMatch(line -> line.contains(id) && line.contains("Unexpected error"));
+		}
+	}
+
+	@Test
 	void theRestIsClosedWithoutSessionsOrSignInPages() {
 		EntityExchangeResult<String> result = client.get()
-			.uri("/api/products")
+			.uri("/api/cart")
 			.accept(MediaType.TEXT_HTML)
 			.exchange()
 			.expectStatus()
