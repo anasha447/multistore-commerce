@@ -17,7 +17,7 @@ public final class Paging {
 	private Paging() {
 	}
 
-	static Pageable sorted(Pageable asked, Sort usual, String... offered) {
+	public static Pageable sorted(Pageable asked, Sort usual, String... offered) {
 		asked.getSort().forEach(order -> {
 			if (!Set.of(offered).contains(order.getProperty())) {
 				throw ApiException.badRequest("Unknown sort field: " + order.getProperty());

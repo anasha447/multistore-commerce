@@ -20,7 +20,7 @@ import com.ecommerce.store.dto.request.UpdateUserStatusRequest;
 import com.ecommerce.store.dto.response.AdminUserResponse;
 import com.ecommerce.store.model.enums.Role;
 import com.ecommerce.store.security.CurrentUserId;
-import com.ecommerce.store.service.StaffService;
+import com.ecommerce.store.service.interfaces.StaffService;
 
 @RestController
 @RequestMapping("/api/admin/users")

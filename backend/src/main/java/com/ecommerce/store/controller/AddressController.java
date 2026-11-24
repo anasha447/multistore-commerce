@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.ecommerce.store.dto.request.AddressRequest;
 import com.ecommerce.store.dto.response.AddressResponse;
 import com.ecommerce.store.security.CurrentUserId;
-import com.ecommerce.store.service.AddressService;
+import com.ecommerce.store.service.interfaces.AddressService;
 import com.ecommerce.store.service.Paging;
 
 @RestController
