@@ -118,6 +118,17 @@ class AdminUserTests {
 	}
 
 	@Test
+	void aShopperIsOutAtOnceToo() {
+		Person admin = people.admin();
+		Person customer = people.customer();
+		assertThat(api.get("/api/users/me", customer.accessToken()).status()).isEqualTo(200);
+		disable(admin, customer);
+		assertThat(api.get("/api/users/me", customer.accessToken()).status()).isEqualTo(401);
+		api.put(PATH + "/" + customer.id() + "/status", Map.of("enabled", true), admin.accessToken());
+		assertThat(api.get("/api/users/me", customer.accessToken()).status()).isEqualTo(200);
+	}
+
+	@Test
 	void anAdminCannotLockThemselfOut() {
 		Person admin = people.admin();
 		Answer answer = disable(admin, admin);

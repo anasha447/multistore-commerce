@@ -1,13 +1,13 @@
 package com.ecommerce.store.dto.response;
 
 import java.time.Instant;
-import java.util.Set;
+import java.util.SortedSet;
 import java.util.TreeSet;
 
 import com.ecommerce.store.model.User;
 import com.ecommerce.store.model.enums.Role;
 
-public record AdminUserResponse(Long id, String email, String firstName, String lastName, String phone, Set<Role> roles,
+public record AdminUserResponse(Long id, String email, String firstName, String lastName, String phone, SortedSet<Role> roles,
 		boolean enabled, boolean mustChangePassword, Instant createdAt) {
 
 	public static AdminUserResponse from(User user) {

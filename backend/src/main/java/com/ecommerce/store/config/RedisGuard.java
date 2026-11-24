@@ -36,6 +36,7 @@ public class RedisGuard {
 			return Optional.ofNullable(breaker.executeSupplier(command));
 		}
 		catch (CallNotPermittedException | DataAccessException ex) {
+			log.debug("Redis did not answer", ex);
 			return Optional.empty();
 		}
 	}

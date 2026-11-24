@@ -3,12 +3,15 @@ package com.ecommerce.store.service;
 import java.util.Set;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.ecommerce.store.config.AfterCommit;
+import com.ecommerce.store.config.CacheNames;
 import com.ecommerce.store.dto.request.CreateStaffRequest;
 import com.ecommerce.store.dto.response.AdminUserResponse;
 import com.ecommerce.store.exception.ApiException;
@@ -16,6 +19,7 @@ import com.ecommerce.store.model.User;
 import com.ecommerce.store.model.enums.Role;
 import com.ecommerce.store.repository.RefreshTokenRepository;
 import com.ecommerce.store.repository.UserRepository;
+import com.ecommerce.store.security.DeniedAccounts;
 
 /** What an admin does with accounts. */
 @Service
@@ -29,6 +33,8 @@ public class StaffService {
 	private final UserService userService;
 
 	private final AuditService audit;
+
+	private final DeniedAccounts deniedAccounts;
 
 	public AdminUserResponse create(CreateStaffRequest request) {
 		User user = User.builder()
@@ -57,6 +63,7 @@ public class StaffService {
 
 	/** Disabling ends every sign-in; the access token is refused on its next request, see ActiveAccountValidator. */
 	@Transactional
+	@CacheEvict(cacheNames = CacheNames.ME, key = "#id")
 	public AdminUserResponse changeStatus(Long adminId, Long id, boolean enabled) {
 		if (adminId.equals(id)) {
 			throw ApiException.conflict("You cannot change the status of your own account");
@@ -64,8 +71,12 @@ public class StaffService {
 		User user = users.findAndLock(id).orElseThrow(StaffService::notFound);
 		AdminUserResponse before = AdminUserResponse.from(user);
 		user.setEnabled(enabled);
-		if (!enabled) {
+		if (enabled) {
+			AfterCommit.run(() -> deniedAccounts.allow(id));
+		}
+		else {
 			refreshTokens.revokeAll(id);
+			AfterCommit.run(() -> deniedAccounts.deny(id));
 		}
 		AdminUserResponse after = AdminUserResponse.from(user);
 		audit.record(enabled ? "ACCOUNT_ENABLED" : "ACCOUNT_DISABLED", "user", id, before, after);
