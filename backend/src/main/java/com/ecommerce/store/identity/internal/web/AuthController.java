@@ -25,6 +25,9 @@ class AuthController {
 	record LoginRequest(@NotBlank @Email String email, @NotBlank String password) {
 	}
 
+	record RefreshRequest(@NotBlank String refreshToken) {
+	}
+
 	record TokenResponse(String accessToken, String refreshToken, String tokenType, long expiresIn) {
 
 		static TokenResponse of(Sessions.Pair pair) {
@@ -35,8 +38,11 @@ class AuthController {
 
 	private final Accounts accounts;
 
-	AuthController(Accounts accounts) {
+	private final Sessions sessions;
+
+	AuthController(Accounts accounts, Sessions sessions) {
 		this.accounts = accounts;
+		this.sessions = sessions;
 	}
 
 	@PostMapping("/register")
@@ -49,6 +55,17 @@ class AuthController {
 	@PostMapping("/login")
 	TokenResponse login(@Valid @RequestBody LoginRequest request) {
 		return TokenResponse.of(accounts.signIn(request.email(), request.password()));
+	}
+
+	@PostMapping("/refresh")
+	TokenResponse refresh(@Valid @RequestBody RefreshRequest request) {
+		return TokenResponse.of(sessions.refresh(request.refreshToken()));
+	}
+
+	@PostMapping("/logout")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	void logout(@Valid @RequestBody RefreshRequest request) {
+		sessions.close(request.refreshToken());
 	}
 
 }
