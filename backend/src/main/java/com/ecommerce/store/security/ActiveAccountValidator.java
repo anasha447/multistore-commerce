@@ -1,7 +1,6 @@
 package com.ecommerce.store.security;
 
 import java.util.List;
-import java.util.Optional;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.oauth2.core.OAuth2Error;
@@ -15,8 +14,8 @@ import com.ecommerce.store.model.enums.Role;
 import com.ecommerce.store.repository.UserRepository;
 
 /**
- * Asked for every token: a disabled account is refused on its next request. Staff are always looked up
- * in Postgres; shoppers are many and harmless enough for Redis to answer.
+ * Asked for every token: a disabled account is refused on its next request. Postgres decides. Only for
+ * shoppers, who are many, is it not asked while nothing speaks against them.
  */
 @Component
 @RequiredArgsConstructor
@@ -35,8 +34,8 @@ class ActiveAccountValidator implements OAuth2TokenValidator<Jwt> {
 	private boolean mayAct(Jwt jwt) {
 		Long id = Long.valueOf(jwt.getSubject());
 		boolean shopper = List.of(Role.CUSTOMER.name()).equals(jwt.getClaimAsStringList("roles"));
-		Optional<Boolean> denied = shopper ? deniedAccounts.isDenied(id) : Optional.empty();
-		return denied.map(answer -> !answer).orElseGet(() -> users.existsByIdAndEnabledTrue(id));
+		boolean unsuspected = shopper && !deniedAccounts.isSuspect(id).orElse(true);
+		return unsuspected || users.existsByIdAndEnabledTrue(id);
 	}
 
 }

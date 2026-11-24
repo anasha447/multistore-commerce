@@ -9,17 +9,19 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cache.CacheManager;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -49,23 +51,36 @@ class CacheTests {
 	private RedisConnectionFactory connections;
 
 	@Autowired
-	private RedisGuard guard;
-
-	@Autowired
-	private CacheManager caches;
+	private MeterRegistry meters;
 
 	@Autowired
 	private TransactionTemplate transaction;
 
 	private StoreCacheManager test;
 
+	/** Keeps tests out of each other's entries. */
+	private final String run = UUID.randomUUID().toString();
+
 	private final AtomicInteger loads = new AtomicInteger();
+
+	private final StoppableGuard stoppable = new StoppableGuard();
+
+	/** Redis, gone at the push of a button. */
+	private static final class StoppableGuard extends RedisGuard {
+
+		private volatile boolean gone;
+
+		@Override
+		public <T> Optional<T> ask(Supplier<T> command) {
+			return gone ? Optional.empty() : super.ask(command);
+		}
+
+	}
 
 	@BeforeEach
 	void createCaches() {
-		String run = UUID.randomUUID().toString();
 		JavaType string = TypeFactory.createDefaultInstance().constructType(String.class);
-		test = new StoreCacheManager(connections, redis, guard, "matessa",
+		test = new StoreCacheManager(connections, redis, stoppable, "matessa",
 				List.of(new CacheSpec("plain", Duration.ofMinutes(10), string), new CacheSpec("list", Duration.ofMinutes(10), string, "g" + run),
 						new CacheSpec("detail", Duration.ofMinutes(10), string, "g" + run)));
 		test.afterPropertiesSet();
@@ -82,11 +97,11 @@ class CacheTests {
 
 	@Test
 	void aGroupIsClearedTogetherByCounting() {
-		read("list", "a");
-		read("detail", "b");
+		read("list", "a" + run);
+		read("detail", "b" + run);
 		test.getCache("detail").clear();
-		assertThat(read("list", "a")).isEqualTo("value 3");
-		assertThat(read("detail", "b")).isEqualTo("value 4");
+		assertThat(read("list", "a" + run)).isEqualTo("value 3");
+		assertThat(read("detail", "b" + run)).isEqualTo("value 4");
 		assertThatExceptionOfType(UnsupportedOperationException.class).isThrownBy(() -> test.getCache("plain").clear());
 	}
 
@@ -104,6 +119,58 @@ class CacheTests {
 			status.setRollbackOnly();
 		});
 		assertThat(read("plain", key)).as("after a rollback").isEqualTo("value 2");
+	}
+
+	@Test
+	void whatCouldNotBeClearedIsNotReadAndIsClearedLater() {
+		String key = UUID.randomUUID().toString();
+		String other = UUID.randomUUID().toString();
+		read("plain", key);
+		read("plain", other);
+		stoppable.gone = true;
+		test.getCache("plain").evict(key);
+		test.repeatFailedClears();
+		stoppable.gone = false;
+
+		assertThat(read("plain", key)).as("Redis is back with the old value").isEqualTo("value 3");
+		assertThat(read("plain", key)).as("and nothing is stored over it").isEqualTo("value 4");
+		assertThat(read("plain", other)).as("other entries are used").isEqualTo("value 2");
+		assertThat(redis.opsForValue().get("s:matessa:v1:plain:" + key)).contains("value 1");
+
+		test.repeatFailedClears();
+		assertThat(redis.hasKey("s:matessa:v1:plain:" + key)).isFalse();
+		assertThat(read("plain", key)).isEqualTo("value 5");
+		assertThat(read("plain", key)).as("cached again").isEqualTo("value 5");
+	}
+
+	@Test
+	void aGroupThatCouldNotBeClearedIsNotReadAndIsClearedLater() {
+		read("list", "a" + run);
+		read("detail", "b" + run);
+		stoppable.gone = true;
+		test.getCache("list").clear();
+		stoppable.gone = false;
+		assertThat(read("list", "a" + run)).isEqualTo("value 3");
+		assertThat(read("detail", "b" + run)).as("the whole group").isEqualTo("value 4");
+		test.repeatFailedClears();
+		assertThat(read("list", "a" + run)).isEqualTo("value 5");
+		assertThat(read("list", "a" + run)).isEqualTo("value 5");
+	}
+
+	@Test
+	void hitsAndMissesAreMeasured() {
+		Person person = people.customer();
+		double hits = gets("hit");
+		double misses = gets("miss");
+		api.get("/api/users/me", person.accessToken());
+		api.get("/api/users/me", person.accessToken());
+		api.get("/api/users/me", person.accessToken());
+		assertThat(gets("hit") - hits).isEqualTo(2);
+		assertThat(gets("miss") - misses).isEqualTo(1);
+	}
+
+	private double gets(String result) {
+		return meters.get("cache.gets").tag("cache", "me").tag("result", result).functionCounter().count();
 	}
 
 	@Test
