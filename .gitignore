@@ -1,0 +1,33 @@
+# local tooling and notes
+.claude/
+.Claude/
+CLAUDE.md
+learning/
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+
+# operations notes, kept off the public repository
+docs/SECURITY.md
+docs/CLOUDFLARE.md
+docs/DEPLOYMENT.md
+docs/PORTING-GUIDE.md
+docs/SPRINT-PLAN.md
+
+# secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.jks
+/keys/
+
+# build output
+target/
+node_modules/
+.next/
+*.log
