@@ -23,7 +23,8 @@ docker compose up -d --wait                      # Postgres on 5434, Redis on 63
 cd ../frontend && npm ci && npm run dev          # the storefront on port 3100
 ```
 
-`./mvnw verify` in `backend/` runs every test; it starts its own containers.
+`./mvnw verify` in `backend/` runs every test; it starts its own containers. With app and storefront running,
+`node scripts/smoke/sign-in.mjs` checks sign-in through the storefront. The first admin is in `backend/.env`.
 
 ## Work
 
