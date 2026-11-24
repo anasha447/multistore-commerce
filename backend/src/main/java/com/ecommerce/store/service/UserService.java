@@ -1,6 +1,7 @@
 package com.ecommerce.store.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,6 +29,22 @@ public class UserService {
 	private final PasswordPolicy passwordPolicy;
 
 	private final TransactionTemplate transaction;
+
+	/** Hashing is slow on purpose and happens outside any transaction. */
+	public User create(User user, String password, String taken) {
+		passwordPolicy.requireUncommon(password);
+		user.setEmail(User.normaliseEmail(user.getEmail()));
+		if (users.existsByEmail(user.getEmail())) {
+			throw ApiException.conflict(taken);
+		}
+		user.setPasswordHash(passwordEncoder.encode(password));
+		try {
+			return users.save(user);
+		}
+		catch (DataIntegrityViolationException ex) {
+			throw users.existsByEmail(user.getEmail()) ? ApiException.conflict(taken) : ex;
+		}
+	}
 
 	@Transactional(readOnly = true)
 	public UserResponse me(Long userId) {

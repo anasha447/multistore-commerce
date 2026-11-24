@@ -4,6 +4,8 @@ import java.time.Instant;
 import java.util.Optional;
 
 import jakarta.persistence.LockModeType;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
@@ -25,6 +27,13 @@ public interface UserRepository extends JpaRepository<User, Long> {
 	boolean existsByEmail(String email);
 
 	boolean existsByRolesContains(Role role);
+
+	/** Both filters are optional; an account with several roles appears once. */
+	@Query("""
+			select u from User u
+			where (:role is null or exists (select 1 from User x join x.roles r where x = u and r = :role))
+			and (:enabled is null or u.enabled = :enabled)""")
+	Page<User> search(Role role, Boolean enabled, Pageable pageable);
 
 	boolean existsByIdAndEnabledTrue(Long id);
 
