@@ -77,8 +77,22 @@ jobs:
           docker run --rm -v "$PWD:/repo:ro"
           ghcr.io/gitleaks/gitleaks@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f
           git /repo --redact --no-banner
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      # The pom alone lists direct dependencies only; the bill of materials has all of them.
+      - name: List every backend dependency
+        working-directory: backend
+        run: |
+          ./mvnw -B -ntp -q org.cyclonedx:cyclonedx-maven-plugin:makeBom             -DoutputFormat=json -DoutputDirectory=target -DoutputName=bom.cdx -DincludeTestScope=false
+          find . -name '*.json' -path '*target*'
+          bom=$(find target -name '*.cdx.json' | head -1)
+          test "$(jq '.components | length' "$bom")" -gt 60
+          cp "$bom" "$RUNNER_TEMP/bom.cdx.json"
       - name: Backend dependencies
         run: >
-          docker run --rm -v "$PWD:/src:ro"
+          docker run --rm -v "$RUNNER_TEMP:/bom:ro"
           ghcr.io/google/osv-scanner@sha256:a70ffffc2bfd33482953e5d6b64c6fcdb30239717a07b0f0d3ab2859ce3e4cde
-          scan source --lockfile /src/backend/pom.xml
+          scan source --lockfile /bom/bom.cdx.json
