@@ -35,11 +35,15 @@ interface UserRepository extends JpaRepository<User, Long> {
 			 where id = :id and (locked_until is null or locked_until <= :now)""")
 	int countFailure(long id, int allowed, Instant lockUntil, Instant now);
 
-	/** Nothing is changed when the account was locked or disabled while the password was being checked. */
+	/** Nothing is changed when the account was locked, disabled or given a new password while the old one was being checked. */
 	@Modifying
 	@Query(nativeQuery = true, value = """
 			update users set failed_logins = 0, locked_until = null
-			 where id = :id and enabled and (locked_until is null or locked_until <= :now)""")
-	int clearFailures(long id, Instant now);
+			 where id = :id and enabled and password_hash = :hash and (locked_until is null or locked_until <= :now)""")
+	int clearFailures(long id, String hash, Instant now);
+
+	/** Everything that ends or continues sign-ins starts with this. */
+	@Query(nativeQuery = true, value = "select id from users where id = :id for update")
+	Optional<Long> lock(long id);
 
 }

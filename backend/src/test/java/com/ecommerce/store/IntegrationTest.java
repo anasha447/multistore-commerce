@@ -17,7 +17,7 @@ import org.springframework.test.context.ContextConfiguration;
 @Inherited
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
 @ContextConfiguration(initializers = Containers.class)
-@Import({ TestClock.Configuration.class, Api.Configuration.class })
+@Import({ TestClock.Configuration.class, Api.Configuration.class, People.Configuration.class })
 public @interface IntegrationTest {
 
 }

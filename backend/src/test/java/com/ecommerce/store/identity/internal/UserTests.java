@@ -124,7 +124,7 @@ class UserTests {
 	}
 
 	private int clear(long id, Instant now) {
-		return transaction.execute(status -> users.clearFailures(id, now));
+		return transaction.execute(status -> users.clearFailures(id, "hash", now));
 	}
 
 	private User load(long id) {

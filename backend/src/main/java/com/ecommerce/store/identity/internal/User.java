@@ -25,7 +25,7 @@ import lombok.NoArgsConstructor;
 @Table(name = "users")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-class User extends PublicEntity {
+public class User extends PublicEntity {
 
 	private String email;
 
