@@ -40,7 +40,11 @@ public class Containers implements ApplicationContextInitializer<ConfigurableApp
 		.withCommand("postgres", "-c", "fsync=off", "-c", "full_page_writes=off", "-c", "synchronous_commit=off", "-c",
 				"max_connections=100");
 
-	private static final GenericContainer<?> REDIS = new GenericContainer<>("redis:7-alpine").withExposedPorts(6379);
+	public static final GenericContainer<?> REDIS = new GenericContainer<>("redis:7-alpine").withExposedPorts(6379)
+		.withEnv(Map.of("STORES", "matessa adventure", "MATESSA_REDIS_PASSWORD", PASSWORD, "ADVENTURE_REDIS_PASSWORD",
+				PASSWORD, "REDIS_HEALTH_PASSWORD", PASSWORD))
+		.withCopyFileToContainer(MountableFile.forHostPath("../deploy/redis/start.sh", 0755), "/start.sh")
+		.withCommand("sh", "/start.sh");
 
 	private static final Path KEYS = keys();
 
@@ -84,7 +88,7 @@ public class Containers implements ApplicationContextInitializer<ConfigurableApp
 		TestPropertyValues
 			.of("STORE_ID=matessa", "MANAGEMENT_PORT=0", "store.password-strength=4", "DB_URL=" + url("matessa"), "DB_APP_USER=matessa_app", "DB_APP_PASSWORD=" + PASSWORD,
 					"DB_OWNER_USER=matessa_owner", "DB_OWNER_PASSWORD=" + PASSWORD, "REDIS_HOST=" + REDIS.getHost(),
-					"REDIS_PORT=" + REDIS.getFirstMappedPort(),
+					"REDIS_PORT=" + REDIS.getFirstMappedPort(), "REDIS_USER=matessa", "REDIS_PASSWORD=" + PASSWORD,
 					"JWT_PRIVATE_KEY=" + KEYS.resolve("private.pem").toUri(), "JWT_PUBLIC_KEY=" + KEYS.resolve("public.pem").toUri())
 			.applyTo(context);
 	}
