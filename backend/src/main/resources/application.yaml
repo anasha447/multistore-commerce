@@ -4,10 +4,43 @@ spring:
   docker:
     compose:
       enabled: false
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_APP_USER}
+    password: ${DB_APP_PASSWORD}
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:10}
+      connection-timeout: 5000
+  flyway:
+    # the owner migrates, the app role never can
+    url: ${spring.datasource.url}
+    user: ${DB_OWNER_USER}
+    password: ${DB_OWNER_PASSWORD}
+    default-schema: shop
+    create-schemas: false
+    placeholders:
+      app_role: ${spring.datasource.username}
   jpa:
     open-in-view: false
     hibernate:
       ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: shop
+        jdbc:
+          time_zone: UTC
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT:6379}
+      username: ${REDIS_USER:}
+      password: ${REDIS_PASSWORD:}
+  modulith:
+    events:
+      jdbc:
+        schema-initialization:
+          # Flyway creates the table
+          enabled: false
   threads:
     virtual:
       enabled: false

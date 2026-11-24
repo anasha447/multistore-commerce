@@ -17,9 +17,17 @@ function create(path, lines) {
 
 create("backend/.env", [
   "# Local passwords, generated. Never commit this file.",
+  "STORE_ID=matessa",
   "DB_PORT=5434",
-  "DB_USER=matessa",
-  `DB_PASSWORD=${secret()}`,
+  "DB_URL=jdbc:postgresql://localhost:5434/matessa?currentSchema=shop",
+  "DB_APP_USER=matessa_app",
+  `DB_APP_PASSWORD=${secret()}`,
+  "DB_OWNER_USER=matessa_owner",
+  `DB_OWNER_PASSWORD=${secret()}`,
+  `DB_BACKUP_PASSWORD=${secret()}`,
+  `DB_SUPERUSER_PASSWORD=${secret()}`,
+  "DB_POOL_SIZE=5",
+  "REDIS_HOST=localhost",
   "REDIS_PORT=6381",
   `REDIS_PASSWORD=${secret()}`,
 ]);

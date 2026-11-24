@@ -135,8 +135,8 @@ create the database owned by the owner; `revoke all on database ... from public`
 `create schema shop authorization <store>_owner`, grant `usage` on it to app and backup; default privileges so the backup role can read every new table.
 For the app role set `statement_timeout = 15s` and `idle_in_transaction_session_timeout = 30s`.
 
-In the first migration: grant select, insert, update, delete on all tables except `stock_movements`, `audit_entries`, `order_status_history` (select and insert only);
-grant select and maintain on the three views.
+Nothing is granted by default. Each migration grants the app role what its tables need: select, insert, update, delete, except `stock_movements`,
+`audit_entries`, `order_status_history` (select and insert only) and the three views (select and maintain). A test compares every table in the schema with this rule.
 
 This design was tried on Postgres 17.10: history could not be changed or deleted by the app, the stores could not connect to each other, the app could refresh
 the views, 50 simultaneous guarded updates on one unit let exactly one through, and 20 simultaneous inserts of one idempotency key let exactly one through.

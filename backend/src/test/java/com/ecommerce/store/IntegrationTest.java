@@ -8,14 +8,14 @@ import java.lang.annotation.Target;
 
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
-import org.springframework.context.annotation.Import;
+import org.springframework.test.context.ContextConfiguration;
 
 /** The whole app on a random port against real Postgres and Redis. */
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
-@Import(TestcontainersConfiguration.class)
+@ContextConfiguration(initializers = Containers.class)
 public @interface IntegrationTest {
 
 }
