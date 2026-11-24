@@ -8,6 +8,7 @@ import java.lang.annotation.Target;
 
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ContextConfiguration;
 
 /** The whole app on a random port against real Postgres and Redis. */
@@ -16,6 +17,7 @@ import org.springframework.test.context.ContextConfiguration;
 @Inherited
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
 @ContextConfiguration(initializers = Containers.class)
+@Import({ TestClock.Configuration.class, Api.Configuration.class })
 public @interface IntegrationTest {
 
 }

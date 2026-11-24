@@ -1,8 +1,15 @@
 package com.ecommerce.store;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.security.GeneralSecurityException;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.util.Base64;
 import java.util.Map;
 import java.util.UUID;
 
@@ -35,6 +42,8 @@ public class Containers implements ApplicationContextInitializer<ConfigurableApp
 
 	private static final GenericContainer<?> REDIS = new GenericContainer<>("redis:7-alpine").withExposedPorts(6379);
 
+	private static final Path KEYS = keys();
+
 	static {
 		Startables.deepStart(POSTGRES, REDIS).join();
 	}
@@ -49,12 +58,34 @@ public class Containers implements ApplicationContextInitializer<ConfigurableApp
 				POSTGRES.getMappedPort(PostgreSQLContainer.POSTGRESQL_PORT), database);
 	}
 
+	private static Path keys() {
+		try {
+			KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
+			generator.initialize(2048);
+			KeyPair pair = generator.generateKeyPair();
+			Path directory = Files.createTempDirectory("jwt");
+			pem(directory.resolve("private.pem"), "PRIVATE", pair.getPrivate().getEncoded());
+			pem(directory.resolve("public.pem"), "PUBLIC", pair.getPublic().getEncoded());
+			return directory;
+		}
+		catch (GeneralSecurityException | IOException ex) {
+			throw new IllegalStateException(ex);
+		}
+	}
+
+	private static void pem(Path file, String kind, byte[] key) throws IOException {
+		Files.writeString(file, "-----BEGIN %1$s KEY-----%n%2$s%n-----END %1$s KEY-----%n".formatted(kind,
+				Base64.getMimeEncoder().encodeToString(key)));
+		file.toFile().deleteOnExit();
+	}
+
 	@Override
 	public void initialize(ConfigurableApplicationContext context) {
 		TestPropertyValues
 			.of("STORE_ID=matessa", "MANAGEMENT_PORT=0", "store.passwords.strength=4", "DB_URL=" + url("matessa"), "DB_APP_USER=matessa_app", "DB_APP_PASSWORD=" + PASSWORD,
 					"DB_OWNER_USER=matessa_owner", "DB_OWNER_PASSWORD=" + PASSWORD, "REDIS_HOST=" + REDIS.getHost(),
-					"REDIS_PORT=" + REDIS.getFirstMappedPort())
+					"REDIS_PORT=" + REDIS.getFirstMappedPort(), "JWT_ISSUER=matessa",
+					"JWT_PRIVATE_KEY=" + KEYS.resolve("private.pem").toUri(), "JWT_PUBLIC_KEYS=" + KEYS.resolve("public.pem").toUri())
 			.applyTo(context);
 	}
 
