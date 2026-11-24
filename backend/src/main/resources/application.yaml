@@ -30,6 +30,7 @@ spring:
     properties:
       hibernate:
         default_schema: shop
+        default_batch_fetch_size: 100
         jdbc:
           time_zone: UTC
   jackson:

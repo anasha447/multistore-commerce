@@ -52,7 +52,7 @@ public class Containers implements ApplicationContextInitializer<ConfigurableApp
 	@Override
 	public void initialize(ConfigurableApplicationContext context) {
 		TestPropertyValues
-			.of("STORE_ID=matessa", "MANAGEMENT_PORT=0", "DB_URL=" + url("matessa"), "DB_APP_USER=matessa_app", "DB_APP_PASSWORD=" + PASSWORD,
+			.of("STORE_ID=matessa", "MANAGEMENT_PORT=0", "store.passwords.strength=4", "DB_URL=" + url("matessa"), "DB_APP_USER=matessa_app", "DB_APP_PASSWORD=" + PASSWORD,
 					"DB_OWNER_USER=matessa_owner", "DB_OWNER_PASSWORD=" + PASSWORD, "REDIS_HOST=" + REDIS.getHost(),
 					"REDIS_PORT=" + REDIS.getFirstMappedPort())
 			.applyTo(context);
