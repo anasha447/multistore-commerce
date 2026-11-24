@@ -1,0 +1,36 @@
+{
+  "name": "frontend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3100",
+    "build": "next build",
+    "start": "next start -p 3100",
+    "lint": "eslint"
+  },
+  "dependencies": {
+    "@react-three/fiber": "^9.8.2",
+    "d3-geo": "^3.1.1",
+    "d3-scale": "^4.0.2",
+    "framer-motion": "^12.42.2",
+    "next": "^16.4.6",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "three": "^0.170.0",
+    "topojson-client": "^3.1.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/d3-geo": "^3.1.0",
+    "@types/d3-scale": "^4.0.9",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/three": "^0.170.0",
+    "@types/topojson-client": "^3.1.5",
+    "eslint": "^9",
+    "eslint-config-next": "^16.4.6",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}
