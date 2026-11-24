@@ -20,12 +20,17 @@ import com.ecommerce.store.config.StoreProperties;
 import com.ecommerce.store.exception.RateLimitException;
 import com.ecommerce.store.model.enums.RateLimitRule;
 
-/** Counts in Redis, so all copies of the app share one count; in local memory while Redis is gone. Never unlimited. */
+/**
+ * Counts in Redis, so all copies of the app share one count, and in local memory, which is enough while
+ * Redis is gone. Never unlimited.
+ */
 @Component
 @RequiredArgsConstructor
 public class RateLimiter {
 
-	private static final RedisScript<Long> SCRIPT = RedisScript.of(new ClassPathResource("scripts/rate-limit.lua"), Long.class);
+	/** With the app's own loader: the one of the current thread may belong to a web context that closes. */
+	private static final RedisScript<Long> SCRIPT = RedisScript
+		.of(new ClassPathResource("scripts/rate-limit.lua", RateLimiter.class.getClassLoader()), Long.class);
 
 	private final Cache<String, Integer> local = Caffeine.newBuilder()
 		.maximumSize(100_000)
@@ -75,7 +80,11 @@ public class RateLimiter {
 		Optional<Long> answer = guard.ask(() -> redis.execute(SCRIPT, List.of(key(name, now / window), key(name, now / window - 1)),
 				Integer.toString(rule.getLimit()), Double.toString(weight(now, window)), Integer.toString(cost),
 				Long.toString(2 * window)));
-		return answer.map(allowed -> allowed == 1).orElseGet(() -> allowedLocally(name, rule.getLimit(), window, cost));
+		if (answer.isPresent() && answer.get() == 0) {
+			return false;
+		}
+		// counted here as well: a hiccup of Redis, or an entry it drops, must not start the count again
+		return allowedLocally(name, rule.getLimit(), window, cost);
 	}
 
 	private synchronized boolean allowedLocally(String name, int limit, long window, int cost) {
