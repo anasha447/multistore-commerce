@@ -1,6 +1,9 @@
 spring:
   application:
     name: store
+  autoconfigure:
+    # no generated user: people come from the identity module
+    exclude: org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration
   docker:
     compose:
       enabled: false
@@ -29,7 +32,28 @@ spring:
         default_schema: shop
         jdbc:
           time_zone: UTC
+  jackson:
+    # what the contract was written against; Jackson 3 changed these defaults
+    mapper:
+      sort-properties-alphabetically: false
+    deserialization:
+      fail-on-null-for-primitives: false
+      fail-on-unknown-properties: false
+    factory:
+      constraints:
+        read:
+          max-document-length: 262144
+    write:
+      write-bigdecimal-as-plain: true
+  servlet:
+    multipart:
+      max-file-size: 8MB
+      max-request-size: 10MB
   data:
+    web:
+      pageable:
+        max-page-size: 2000
+        serialization-mode: via-dto
     redis:
       host: ${REDIS_HOST}
       port: ${REDIS_PORT:6379}
@@ -50,3 +74,7 @@ server:
   tomcat:
     threads:
       max: 50
+
+logging:
+  pattern:
+    correlation: "[%X{requestId:-}] "
