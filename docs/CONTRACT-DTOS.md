@@ -5,6 +5,10 @@ contract: the JSON must match exactly. `BigDecimal` is a JSON number; `Instant` 
 Null response fields are sent as `null`. Nested types (`Counts`, `Revenue`, ...) belong to the response listed above them.
 Unknown request fields are ignored, as today.
 
+Changed by hand since: every text a request sends has a maximum length, so `LoginRequest`,
+`RefreshRequest` and `ChangePasswordRequest.currentPassword` gained `Size(max)`. No account can have a
+longer password, and refresh tokens have 43 characters, so nothing the storefront sends is refused.
+
 ## Identity requests
 
 ### AddressRequest
@@ -24,7 +28,7 @@ Unknown request fields are ignored, as today.
 
 | Field | Type | Rules |
 |---|---|---|
-| `currentPassword` | `String` | NotBlank |
+| `currentPassword` | `String` | NotBlank, Size(max = 100) |
 | `newPassword` | `String` | NotBlank, Size(min = 8, max = 100) |
 
 ### CreateStaffRequest
@@ -41,14 +45,14 @@ Unknown request fields are ignored, as today.
 
 | Field | Type | Rules |
 |---|---|---|
-| `email` | `String` | NotBlank, Email |
-| `password` | `String` | NotBlank |
+| `email` | `String` | NotBlank, Email, Size(max = 255) |
+| `password` | `String` | NotBlank, Size(max = 100) |
 
 ### RefreshRequest
 
 | Field | Type | Rules |
 |---|---|---|
-| `refreshToken` | `String` | NotBlank |
+| `refreshToken` | `String` | NotBlank, Size(max = 100) |
 
 ### RegisterRequest
 

@@ -1,39 +1,35 @@
 package com.ecommerce.store.service.impl;
 
-import java.util.Set;
-
 import lombok.RequiredArgsConstructor;
-import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import com.ecommerce.store.config.AfterCommit;
-import com.ecommerce.store.config.CacheNames;
 import com.ecommerce.store.dto.request.CreateStaffRequest;
 import com.ecommerce.store.dto.response.AdminUserResponse;
 import com.ecommerce.store.exception.ApiException;
 import com.ecommerce.store.model.User;
 import com.ecommerce.store.model.enums.Role;
-import com.ecommerce.store.repository.RefreshTokenRepository;
 import com.ecommerce.store.repository.UserRepository;
 import com.ecommerce.store.security.DeniedAccounts;
 import com.ecommerce.store.service.Paging;
 import com.ecommerce.store.service.interfaces.AuditService;
+import com.ecommerce.store.service.interfaces.RefreshTokenService;
 import com.ecommerce.store.service.interfaces.StaffService;
 import com.ecommerce.store.service.interfaces.UserService;
 
+/** Reads accounts directly; changes them through UserService. */
 @Service
 @RequiredArgsConstructor
 class StaffServiceImpl implements StaffService {
 
 	private final UserRepository users;
 
-	private final RefreshTokenRepository refreshTokens;
-
 	private final UserService userService;
+
+	private final RefreshTokenService refreshTokens;
 
 	private final AuditService audit;
 
@@ -41,17 +37,7 @@ class StaffServiceImpl implements StaffService {
 
 	@Override
 	public AdminUserResponse create(CreateStaffRequest request) {
-		User user = User.builder()
-			.email(request.email())
-			.firstName(request.firstName())
-			.lastName(request.lastName())
-			.phone(request.phone())
-			.roles(Set.of(Role.MANAGER))
-			.mustChangePassword(true)
-			.build();
-		return AdminUserResponse.from(userService.create(user, request.password(),
-				"An account with this email already exists.", created -> audit.record("STAFF_CREATED", "user",
-						created.getId(), null, AdminUserResponse.from(created))));
+		return AdminUserResponse.from(userService.createStaff(request));
 	}
 
 	@Override
@@ -64,20 +50,19 @@ class StaffServiceImpl implements StaffService {
 	@Override
 	@Transactional(readOnly = true)
 	public AdminUserResponse get(Long id) {
-		return AdminUserResponse.from(users.findById(id).orElseThrow(StaffServiceImpl::notFound));
+		return AdminUserResponse.from(users.findById(id).orElseThrow(() -> ApiException.notFound("Account not found.")));
 	}
 
 	/** The access token is refused by ActiveAccountValidator. */
 	@Override
 	@Transactional
-	@CacheEvict(cacheNames = CacheNames.ME, key = "#id")
 	public AdminUserResponse changeStatus(Long adminId, Long id, boolean enabled) {
 		if (adminId.equals(id)) {
 			throw ApiException.conflict("You cannot change the status of your own account");
 		}
-		User user = users.findAndLock(id).orElseThrow(StaffServiceImpl::notFound);
+		User user = userService.lock(id);
 		AdminUserResponse before = AdminUserResponse.from(user);
-		user.setEnabled(enabled);
+		userService.setEnabled(user, enabled);
 		if (enabled) {
 			AfterCommit.run(() -> deniedAccounts.allow(id));
 		}
@@ -88,10 +73,6 @@ class StaffServiceImpl implements StaffService {
 		AdminUserResponse after = AdminUserResponse.from(user);
 		audit.record(enabled ? "ACCOUNT_ENABLED" : "ACCOUNT_DISABLED", "user", id, before, after);
 		return after;
-	}
-
-	private static ApiException notFound() {
-		return ApiException.notFound("Account not found.");
 	}
 
 }

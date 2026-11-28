@@ -52,23 +52,26 @@ Root package `com.ecommerce.store`, packages by layer (ADR-0018).
 
 | Package | Holds | May use |
 |---|---|---|
-| `controller` | `@RestController` classes: validate, call one service method, return a DTO. No logic, no transaction | `service.interfaces`, `dto`, `model.enums` |
+| `controller` | `@RestController` classes: validate, call one service method, return a DTO. No logic, no transaction, no rate limiter | `service.interfaces`, `dto`, `model.enums`, `security` annotations |
 | `service.interfaces` | What each service offers, one interface each (ADR-0019) | `model`, `dto` |
-| `service.impl` | Business rules and transactions, one `<Interface>Impl` each, not public | `service.interfaces`, `repository`, `model`, `dto`, `exception`, `security`, `config` |
+| `service.impl` | Business rules and transactions, one `<Interface>Impl` each, not public. Never the request or the token: `security.Caller` says who acts | `service.interfaces`, `repository`, `model`, `dto`, `exception`, `security`, `config` |
 | `repository` | Spring Data interfaces and their queries | `model` |
 | `model` | JPA entities | `model.enums` |
 | `model.enums` | `Role`, `AddressType`, `OrderStatus`, `PaymentMethod`, `PaymentStatus`, `ShippingStatus`, `DiscountType`, `ContactQueryStatus` | nothing |
 | `dto.request`, `dto.response` | Records. Request rules as Bean Validation, responses with a static `from(entity)` | `model` |
 | `exception` | `ApiException` and the one `GlobalExceptionHandler` | `dto` |
-| `security` | `SecurityConfig` with the access policy, tokens, request filter | `repository`, `model`, `exception` |
-| `config` | Settings, clock, seed, cache and event configuration | everything |
+| `security` | `SecurityConfig` with the access policy, tokens, request filter, rate limits, `Caller` | `repository` (reads accounts), `model`, `exception`, `config` |
+| `config` | Settings, clock, Redis guard, cache and event configuration | `model`, `dto` |
 
-A layer test (ArchUnit) fails the build when a controller touches a repository, a repository or entity
-looks upward, a DTO is not a record, or a service is not an interface with its implementation.
+A layer test (ArchUnit) fails the build when a controller touches a repository or the rate limiter, a
+repository or entity looks upward, a DTO is not a record, a service is not an interface with its
+implementation, a service sees the request or the token, a class other than the owner changes a table,
+`@Transactional` appears outside `service.impl`, two packages depend on each other, time is read without
+the `Clock`, or a text in a request has no maximum length.
 
 ### Features
 
-The layers hold these features. The owner column is a rule, not a package: only that service uses the repository of the table.
+The layers hold these features. The owner column is a rule, not a package: only that service changes the table (saves, deletes, updates, locks); others may read it.
 
 | Feature | Services | Talks to |
 |---|---|---|
@@ -131,7 +134,7 @@ repository root
     │   ├── dto/          request/  response/
     │   ├── exception/    ApiException, GlobalExceptionHandler
     │   ├── security/     SecurityConfig, JwtService, RequestFilter ...
-    │   └── config/       StoreProperties, AdminSeeder ...
+    │   └── config/       StoreProperties, CacheConfig, RedisGuard ...
     ├── src/main/resources/application.yaml  db/migration/
     └── src/test/java/...  contract/ reads docs/
 ```

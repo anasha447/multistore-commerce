@@ -1,4 +1,4 @@
-package com.ecommerce.store.config;
+package com.ecommerce.store.service.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
@@ -11,12 +11,12 @@ import com.ecommerce.store.People;
 import com.ecommerce.store.model.User;
 import com.ecommerce.store.model.enums.Role;
 import com.ecommerce.store.repository.UserRepository;
-import com.ecommerce.store.security.PasswordPolicy;
+import com.ecommerce.store.config.StoreProperties;
+import com.ecommerce.store.service.interfaces.UserService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.mock.env.MockEnvironment;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 
 @IntegrationTest
@@ -27,10 +27,7 @@ class AdminSeederTests {
 	private UserRepository users;
 
 	@Autowired
-	private PasswordEncoder encoder;
-
-	@Autowired
-	private PasswordPolicy policy;
+	private UserService userService;
 
 	@Autowired
 	private JdbcClient jdbc;
@@ -61,7 +58,7 @@ class AdminSeederTests {
 	private AdminSeeder seeder(String email, String password) {
 		MockEnvironment production = new MockEnvironment();
 		production.setActiveProfiles("prod");
-		return new AdminSeeder(users, encoder, policy, new StoreProperties("matessa", email, password, "", true, 100, 1), production);
+		return new AdminSeeder(userService, new StoreProperties("matessa", email, password, "", true, 100, 1), production);
 	}
 
 }

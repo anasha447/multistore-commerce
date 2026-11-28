@@ -16,6 +16,7 @@ import com.ecommerce.store.dto.response.UserResponse;
 import com.ecommerce.store.model.enums.RateLimitRule;
 import com.ecommerce.store.security.CurrentUserId;
 import com.ecommerce.store.security.RateLimited;
+import com.ecommerce.store.service.interfaces.AuthService;
 import com.ecommerce.store.service.interfaces.UserService;
 
 @RestController
@@ -24,6 +25,8 @@ import com.ecommerce.store.service.interfaces.UserService;
 class UserController {
 
 	private final UserService userService;
+
+	private final AuthService authService;
 
 	@GetMapping
 	UserResponse me(@CurrentUserId Long userId) {
@@ -39,7 +42,7 @@ class UserController {
 	@RateLimited(RateLimitRule.PASSWORD)
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	void changePassword(@CurrentUserId Long userId, @Valid @RequestBody ChangePasswordRequest request) {
-		userService.changePassword(userId, request);
+		authService.changePassword(userId, request);
 	}
 
 }

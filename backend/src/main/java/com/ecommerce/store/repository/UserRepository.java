@@ -12,7 +12,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
-import org.springframework.transaction.annotation.Transactional;
 
 import com.ecommerce.store.model.User;
 import com.ecommerce.store.model.enums.Role;
@@ -48,7 +47,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
 	/** Counts a wrong password. The last allowed one locks and starts counting again; a locked account is left alone. */
 	@Modifying
-	@Transactional
 	@Query(nativeQuery = true, value = """
 			update users
 			   set failed_logins = case when failed_logins + 1 >= :allowed then 0 else failed_logins + 1 end,
@@ -58,7 +56,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
 	/** Changes nothing when the account was locked, disabled or given a new password while the old one was checked. */
 	@Modifying
-	@Transactional
 	@Query(nativeQuery = true, value = """
 			update users set failed_logins = 0, locked_until = null
 			 where id = :id and enabled and password_hash = :hash and (locked_until is null or locked_until <= :now)""")
