@@ -30,13 +30,17 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.core.OAuth2TokenValidator;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.jwt.JwtIssuerValidator;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.util.Assert;
 import org.springframework.web.servlet.HandlerExceptionResolver;
 
+import com.ecommerce.store.config.StoreProperties;
 import com.ecommerce.store.model.User;
 import com.ecommerce.store.model.enums.Role;
 import com.ecommerce.store.repository.UserRepository;
@@ -124,6 +128,12 @@ class SecurityConfig {
 		requests.requestMatchers(DELETE, "/api/reviews/*").authenticated();
 
 		requests.anyRequest().denyAll();
+	}
+
+	/** Added to the resource server's checks, like ActiveAccountValidator. */
+	@Bean
+	OAuth2TokenValidator<Jwt> issuedByThisStore(StoreProperties store) {
+		return new JwtIssuerValidator(store.id());
 	}
 
 	@Bean

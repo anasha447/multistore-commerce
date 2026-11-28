@@ -5,27 +5,26 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.UUID;
-
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.keygen.Base64StringKeyGenerator;
 import org.springframework.security.crypto.keygen.StringKeyGenerator;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-
 import com.ecommerce.store.dto.response.TokenResponse;
 import com.ecommerce.store.exception.ApiException;
 import com.ecommerce.store.model.RefreshToken;
 import com.ecommerce.store.model.User;
 import com.ecommerce.store.repository.RefreshTokenRepository;
-import com.ecommerce.store.repository.UserRepository;
 import com.ecommerce.store.security.Hashes;
 import com.ecommerce.store.security.JwtService;
 import com.ecommerce.store.service.interfaces.AuditService;
 import com.ecommerce.store.service.interfaces.RefreshTokenService;
+import com.ecommerce.store.service.interfaces.UserService;
 
 /**
- * Sign-ins and their refresh tokens. Every change locks the account's row first, so a token being
- * exchanged cannot slip past a revocation that happens at the same moment.
+ * Every change locks the account's row first, so a token being exchanged cannot slip past a revocation
+ * that happens at the same moment.
  */
 @Service
 @RequiredArgsConstructor
@@ -41,7 +40,7 @@ class RefreshTokenServiceImpl implements RefreshTokenService {
 
 	private final RefreshTokenRepository tokens;
 
-	private final UserRepository users;
+	private final UserService userService;
 
 	private final JwtService jwt;
 
@@ -52,7 +51,7 @@ class RefreshTokenServiceImpl implements RefreshTokenService {
 	@Override
 	@Transactional
 	public TokenResponse open(User user) {
-		if (users.clearFailures(user.getId(), user.getPasswordHash(), clock.instant()) == 0) {
+		if (!userService.clearFailedSignIns(user)) {
 			throw ApiException.badCredentials();
 		}
 		audit.recordSignIn(user);
@@ -64,10 +63,10 @@ class RefreshTokenServiceImpl implements RefreshTokenService {
 	@Transactional(noRollbackFor = ApiException.class)
 	public TokenResponse refresh(String value) {
 		ApiException over = ApiException.unauthorized("Refresh token expired or revoked");
-		Long owner = tokens.findOwner(Hashes.sha256(value))
-			.orElseThrow(() -> ApiException.unauthorized("Invalid refresh token"));
-		User user = users.findAndLock(owner).orElseThrow(() -> over);
-		RefreshToken token = tokens.findByTokenHash(Hashes.sha256(value)).orElseThrow(() -> over);
+		String hash = Hashes.sha256(value);
+		Long owner = tokens.findOwner(hash).orElseThrow(() -> ApiException.unauthorized("Invalid refresh token"));
+		User user = userService.lock(owner);
+		RefreshToken token = tokens.findByTokenHash(hash).orElseThrow(() -> over);
 		Instant now = clock.instant();
 		if (token.isRevoked()) {
 			boolean justRotated = token.getRotatedAt() != null && !now.isAfter(token.getRotatedAt().plus(GRACE));
@@ -87,8 +86,17 @@ class RefreshTokenServiceImpl implements RefreshTokenService {
 	@Override
 	@Transactional
 	public void logout(String value) {
-		tokens.findOwner(Hashes.sha256(value)).flatMap(users::findAndLock).flatMap(user -> tokens.findByTokenHash(Hashes.sha256(value)))
-			.ifPresent(token -> tokens.revokeFamily(token.getFamilyId()));
+		String hash = Hashes.sha256(value);
+		tokens.findOwner(hash).ifPresent(owner -> {
+			userService.lock(owner);
+			tokens.findByTokenHash(hash).ifPresent(token -> tokens.revokeFamily(token.getFamilyId()));
+		});
+	}
+
+	@Override
+	@Transactional(propagation = Propagation.MANDATORY)
+	public void revokeAll(Long userId) {
+		tokens.revokeAll(userId);
 	}
 
 	private TokenResponse issue(User user, String family) {

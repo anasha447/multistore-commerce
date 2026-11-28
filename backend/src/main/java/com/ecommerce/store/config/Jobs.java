@@ -6,9 +6,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-import com.ecommerce.store.security.DeniedAccounts;
-
-/** What every copy of the app does for itself, again and again. */
+/** What every copy of the app does for itself, again and again. See also DeniedAccountsJob. */
 @Component
 @EnableScheduling
 @ConditionalOnBooleanProperty(name = "store.jobs", matchIfMissing = true)
@@ -17,16 +15,9 @@ class Jobs {
 
 	private final StoreCacheManager caches;
 
-	private final DeniedAccounts deniedAccounts;
-
 	@Scheduled(fixedDelayString = "PT2S")
 	void repeatFailedClears() {
 		caches.repeatFailedClears();
-	}
-
-	@Scheduled(fixedDelayString = "PT5S")
-	void readDisabledAccounts() {
-		deniedAccounts.readFromDatabase();
 	}
 
 }

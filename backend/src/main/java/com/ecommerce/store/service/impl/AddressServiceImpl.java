@@ -14,8 +14,8 @@ import com.ecommerce.store.dto.response.AddressResponse;
 import com.ecommerce.store.exception.ApiException;
 import com.ecommerce.store.model.Address;
 import com.ecommerce.store.repository.AddressRepository;
-import com.ecommerce.store.repository.UserRepository;
 import com.ecommerce.store.service.interfaces.AddressService;
+import com.ecommerce.store.service.interfaces.UserService;
 
 @Service
 @RequiredArgsConstructor
@@ -23,7 +23,7 @@ class AddressServiceImpl implements AddressService {
 
 	private final AddressRepository addresses;
 
-	private final UserRepository users;
+	private final UserService userService;
 
 	@Override
 	@Cacheable(cacheNames = CacheNames.ADDRESSES, key = "#userId", sync = true)
@@ -58,7 +58,7 @@ class AddressServiceImpl implements AddressService {
 	/** The account's row is locked, so two requests cannot both set a default. */
 	private AddressResponse save(Address address, AddressRequest request) {
 		if (request.isDefault()) {
-			users.findAndLock(address.getUserId());
+			userService.lock(address.getUserId());
 			// 0 is nobody's id
 			addresses.clearDefault(address.getUserId(), (address.getId() != null) ? address.getId() : 0);
 		}

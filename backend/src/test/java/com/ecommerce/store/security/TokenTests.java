@@ -158,6 +158,8 @@ class TokenTests {
 		assertThat(status(sign(JWSAlgorithm.RS256, ours, claims(c -> c.audience("adventure"))))).isEqualTo(401);
 		assertThat(status(sign(JWSAlgorithm.RS256, ours, claims(c -> c.audience((String) null))))).isEqualTo(401);
 		assertThat(status(sign(JWSAlgorithm.RS256, ours, claims(c -> c.subject("1"))))).isEqualTo(401);
+		assertThat(status(sign(JWSAlgorithm.RS256, ours, claims(c -> c.issuer("adventure"))))).as("issuer").isEqualTo(401);
+		assertThat(status(sign(JWSAlgorithm.RS256, ours, claims(c -> c.issuer(null))))).as("no issuer").isEqualTo(401);
 	}
 
 	@Test

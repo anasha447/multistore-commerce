@@ -17,6 +17,7 @@ import java.util.function.Supplier;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.support.NullValue;
 import org.springframework.data.redis.cache.RedisCache;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
@@ -34,6 +35,7 @@ import tools.jackson.databind.json.JsonMapper;
  * Spring's Redis caches with this shop's rules (CACHING.md): Redis may be gone, misses for one key are
  * loaded once, missing things are remembered briefly, lifetimes vary a little, groups clear by counting.
  */
+@Slf4j
 class StoreCacheManager extends RedisCacheManager {
 
 	/** Raised when the shape of cached values changes, so a deploy never reads an old one. */
@@ -209,6 +211,8 @@ class StoreCacheManager extends RedisCacheManager {
 				return guard.ask(command);
 			}
 			catch (SerializationException ex) {
+				// answered from Postgres, but someone must hear of it: VERSION was not raised
+				log.warn("An entry of {} cannot be read", getName(), ex);
 				return Optional.empty();
 			}
 		}

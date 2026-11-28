@@ -1,6 +1,5 @@
 package com.ecommerce.store.controller;
 
-import java.util.Locale;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -18,9 +17,7 @@ import com.ecommerce.store.dto.response.TokenResponse;
 import com.ecommerce.store.dto.response.UserResponse;
 import com.ecommerce.store.model.enums.RateLimitRule;
 import com.ecommerce.store.security.RateLimited;
-import com.ecommerce.store.security.RateLimiter;
 import com.ecommerce.store.service.interfaces.AuthService;
-import com.ecommerce.store.service.interfaces.RefreshTokenService;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -28,10 +25,6 @@ import com.ecommerce.store.service.interfaces.RefreshTokenService;
 class AuthController {
 
 	private final AuthService authService;
-
-	private final RefreshTokenService refreshTokenService;
-
-	private final RateLimiter rateLimiter;
 
 	@PostMapping("/register")
 	@RateLimited({ RateLimitRule.REGISTER, RateLimitRule.REGISTER_DAY })
@@ -43,22 +36,20 @@ class AuthController {
 	@PostMapping("/login")
 	@RateLimited(RateLimitRule.LOGIN)
 	TokenResponse login(@Valid @RequestBody LoginRequest request) {
-		rateLimiter.check(RateLimitRule.LOGIN_ACCOUNT, request.email().toLowerCase(Locale.ROOT));
 		return authService.login(request);
 	}
 
-	/** Never limited by address: all refreshes come from the storefront itself. */
+	/** Never limited by address: all refreshes come from the storefront itself. Limited by token instead. */
 	@PostMapping("/refresh")
 	@RateLimited({})
 	TokenResponse refresh(@Valid @RequestBody RefreshRequest request) {
-		rateLimiter.check(RateLimitRule.REFRESH, request.refreshToken());
-		return refreshTokenService.refresh(request.refreshToken());
+		return authService.refresh(request.refreshToken());
 	}
 
 	@PostMapping("/logout")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	void logout(@Valid @RequestBody RefreshRequest request) {
-		refreshTokenService.logout(request.refreshToken());
+		authService.logout(request.refreshToken());
 	}
 
 }

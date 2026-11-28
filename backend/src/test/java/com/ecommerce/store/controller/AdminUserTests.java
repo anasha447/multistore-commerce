@@ -10,10 +10,12 @@ import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.simple.JdbcClient;
 
 import com.ecommerce.store.Api;
 import com.ecommerce.store.Api.Answer;
 import com.ecommerce.store.IntegrationTest;
+import com.ecommerce.store.SqlCounter;
 import com.ecommerce.store.People;
 import com.ecommerce.store.People.Person;
 import com.ecommerce.store.model.BaseEntity;
@@ -28,6 +30,12 @@ class AdminUserTests {
 
 	@Autowired
 	private People people;
+
+	@Autowired
+	private JdbcClient jdbc;
+
+	@Autowired
+	private SqlCounter sql;
 
 	@Test
 	void createsAManagerWhoMustChangeThePassword() {
@@ -84,6 +92,28 @@ class AdminUserTests {
 		assertThat(page.json().get("content")).hasSize(1);
 		assertThat(api.get(PATH + "?role=OWNER", admin.accessToken()).status()).isEqualTo(400);
 		assertThat(api.get(PATH + "?sort=passwordHash", admin.accessToken()).status()).isEqualTo(400);
+	}
+
+	/** Roles come in batches, not one statement per account. */
+	@Test
+	void aPageOfAccountsTakesAFewStatements() {
+		for (int i = 0; i < 40; i++) {
+			long id = BaseEntity.newId();
+			jdbc.sql("""
+					insert into users (id, email, password_hash, first_name, last_name, enabled, must_change_password, created_at, updated_at)
+					values (?, ?, 'x', 'A', 'B', true, false, now(), now())""")
+				.params(id, People.email())
+				.update();
+			jdbc.sql("insert into user_roles (user_id, role) values (?, 'CUSTOMER')").param(id).update();
+		}
+		Person admin = people.admin();
+		int[] size = new int[1];
+		int statements = sql.during(() -> size[0] = api.get(PATH + "?role=CUSTOMER&size=40", admin.accessToken())
+			.json()
+			.get("content")
+			.size());
+		assertThat(size[0]).isEqualTo(40);
+		assertThat(statements).as("account check, page, count, roles").isLessThanOrEqualTo(4);
 	}
 
 	@Test
